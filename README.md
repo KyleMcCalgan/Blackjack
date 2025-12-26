@@ -23,7 +23,7 @@ A real-time multiplayer blackjack game built with Node.js and Socket.IO. Host ga
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/blackjack-game.git
+git clone https://github.com/KyleMcCalgan/Blackjack
 cd blackjack-game
 
 # Install dependencies
