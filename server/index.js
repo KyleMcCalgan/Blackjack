@@ -24,12 +24,45 @@ app.get('/host', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/host.html'));
 });
 
+// Game state storage
+let gameConfig = {
+  startingBankroll: 1000,
+  minBet: 10,
+  maxBet: 500, // null = no limit
+  deckCount: 6,
+  blackjackPayout: '3:2',
+  insurancePayout: '2:1',
+  splitAcesBlackjack: true
+};
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`[${new Date().toLocaleTimeString()}] Player connected: ${socket.id}`);
 
   socket.on('disconnect', () => {
     console.log(`[${new Date().toLocaleTimeString()}] Player disconnected: ${socket.id}`);
+  });
+
+  // Host configuration events
+  socket.on('save-config', (config) => {
+    console.log(`[${new Date().toLocaleTimeString()}] Config saved by ${socket.id}:`);
+    console.log(JSON.stringify(config, null, 2));
+
+    gameConfig = { ...config };
+
+    // Send confirmation back to client
+    socket.emit('config-saved', {
+      success: true,
+      config: gameConfig,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  socket.on('config-update', (config) => {
+    console.log(`[${new Date().toLocaleTimeString()}] Config update from ${socket.id}:`);
+    console.log(JSON.stringify(config, null, 2));
+
+    gameConfig = { ...config };
   });
 
   // Placeholder for game events
@@ -62,6 +95,7 @@ rl.on('line', (input) => {
       console.log('\nAvailable Commands:');
       console.log('/help       - Show this help message');
       console.log('/info       - Display server configuration');
+      console.log('/config     - View current game configuration');
       console.log('/players    - List all connected players');
       console.log('/url        - Display ngrok public URL');
       console.log('/start      - Force start game (future)');
@@ -76,6 +110,12 @@ rl.on('line', (input) => {
       console.log(`Local URL: http://localhost:${PORT}`);
       console.log(`Connected clients: ${io.engine.clientsCount}`);
       console.log(`Status: Running\n`);
+      break;
+
+    case '/config':
+      console.log('\nCurrent Game Configuration:');
+      console.log(JSON.stringify(gameConfig, null, 2));
+      console.log('');
       break;
 
     case '/players':
