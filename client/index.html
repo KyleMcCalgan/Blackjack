@@ -5,12 +5,314 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blackjack Game</title>
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/table.css">
+    <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
-    <!-- Player game interface -->
-    
+    <!-- Join Screen Overlay -->
+    <div id="joinScreen" class="join-screen">
+        <div class="join-container">
+            <h1>🎰 Blackjack</h1>
+            <div id="connectionStatus" class="connection-status">
+                <span class="status-dot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+
+            <form id="joinForm" class="join-form">
+                <label for="playerName">Enter Your Name</label>
+                <input
+                    type="text"
+                    id="playerName"
+                    placeholder="Your name"
+                    maxlength="20"
+                    required
+                    autocomplete="off"
+                >
+                <button type="submit" id="joinButton" disabled>
+                    Join Game
+                </button>
+            </form>
+
+            <div class="join-info">
+                <p>💡 Tips:</p>
+                <ul>
+                    <li>Up to 5 players can join</li>
+                    <li>First player becomes the host</li>
+                    <li>Host can start the game</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game UI -->
+    <div id="gameUI" class="game-ui" style="display: none;">
+        <!-- Header -->
+        <header class="game-header">
+            <div class="header-left">
+                <h1>🎰 Blackjack</h1>
+                <div class="phase-indicator">
+                    <span id="phaseText">Lobby</span>
+                    <span id="roundNumber" class="round-badge">Round 0</span>
+                    <span id="phaseTimer" class="timer-badge" style="display: none;">⏱ 0s</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="hostSettingsBtn" class="host-settings-btn" style="display: none;" title="Host Settings">
+                    ⚙️ Settings
+                </button>
+                <div class="player-info">
+                    <span id="playerNameDisplay" class="player-name"></span>
+                    <span id="playerBankroll" class="bankroll">$1000</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Blackjack Table -->
+        <main class="table-container">
+            <!-- Dealer Area -->
+            <div class="dealer-area">
+                <div class="dealer-info">
+                    <h2>Dealer</h2>
+                    <div id="dealerValue" class="hand-value">-</div>
+                </div>
+                <div id="dealerCards" class="card-container dealer-cards">
+                    <!-- Cards will be added here dynamically -->
+                </div>
+            </div>
+
+            <!-- Action Controls (positioned near dealer) -->
+            <div id="actionControlsArea" class="action-controls-floating">
+                <!-- Action buttons will appear here during playing phase -->
+            </div>
+
+            <!-- Player Seats (5 seats in arc around table) -->
+            <div class="player-seats">
+                <!-- Seat 1 -->
+                <div class="player-seat" data-seat="1">
+                    <div class="seat-empty">
+                        <span class="seat-label">Seat 1</span>
+                    </div>
+                    <div class="seat-occupied" style="display: none;">
+                        <div class="seat-header">
+                            <span class="seat-player-name"></span>
+                            <span class="seat-bankroll"></span>
+                        </div>
+                        <div class="seat-cards"></div>
+                        <div class="seat-bet-info">
+                            <span class="bet-amount"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seat 2 -->
+                <div class="player-seat" data-seat="2">
+                    <div class="seat-empty">
+                        <span class="seat-label">Seat 2</span>
+                    </div>
+                    <div class="seat-occupied" style="display: none;">
+                        <div class="seat-header">
+                            <span class="seat-player-name"></span>
+                            <span class="seat-bankroll"></span>
+                        </div>
+                        <div class="seat-cards"></div>
+                        <div class="seat-bet-info">
+                            <span class="bet-amount"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seat 3 -->
+                <div class="player-seat" data-seat="3">
+                    <div class="seat-empty">
+                        <span class="seat-label">Seat 3</span>
+                    </div>
+                    <div class="seat-occupied" style="display: none;">
+                        <div class="seat-header">
+                            <span class="seat-player-name"></span>
+                            <span class="seat-bankroll"></span>
+                        </div>
+                        <div class="seat-cards"></div>
+                        <div class="seat-bet-info">
+                            <span class="bet-amount"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seat 4 -->
+                <div class="player-seat" data-seat="4">
+                    <div class="seat-empty">
+                        <span class="seat-label">Seat 4</span>
+                    </div>
+                    <div class="seat-occupied" style="display: none;">
+                        <div class="seat-header">
+                            <span class="seat-player-name"></span>
+                            <span class="seat-bankroll"></span>
+                        </div>
+                        <div class="seat-cards"></div>
+                        <div class="seat-bet-info">
+                            <span class="bet-amount"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seat 5 -->
+                <div class="player-seat" data-seat="5">
+                    <div class="seat-empty">
+                        <span class="seat-label">Seat 5</span>
+                    </div>
+                    <div class="seat-occupied" style="display: none;">
+                        <div class="seat-header">
+                            <span class="seat-player-name"></span>
+                            <span class="seat-bankroll"></span>
+                        </div>
+                        <div class="seat-cards"></div>
+                        <div class="seat-bet-info">
+                            <span class="bet-amount"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Table Info -->
+            <div class="table-center">
+                <div id="tableMessage" class="table-message">
+                    Waiting for players...
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Controls Area (will be used for betting/actions later) -->
+        <footer class="game-footer">
+            <!-- Lobby Settings Display -->
+            <div id="lobbySettings" class="lobby-settings-footer" style="display: none;">
+                <div class="lobby-settings-header">
+                    <h3>📋 Game Rules</h3>
+                </div>
+                <div class="settings-grid-footer">
+                    <div class="setting-item-footer">
+                        <span class="setting-label">Starting Bankroll</span>
+                        <span class="setting-value" id="displayBankroll">$1000</span>
+                    </div>
+                    <div class="setting-item-footer">
+                        <span class="setting-label">Bet Range</span>
+                        <span class="setting-value" id="displayBetRange">$10 - $500</span>
+                    </div>
+                    <div class="setting-item-footer">
+                        <span class="setting-label">Decks</span>
+                        <span class="setting-value" id="displayDecks">6</span>
+                    </div>
+                    <div class="setting-item-footer">
+                        <span class="setting-label">Blackjack Pays</span>
+                        <span class="setting-value" id="displayBJPayout">3:2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="controlsArea" class="controls-area">
+                <!-- Controls will be added dynamically based on game phase -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="resultsModal" class="modal" style="display: none;">
+        <div class="modal-content results-modal">
+            <div class="modal-header">
+                <h2 id="resultsTitle">Round Results</h2>
+            </div>
+
+            <div class="modal-body" id="resultsBody">
+                <!-- Results will be injected here -->
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-primary" id="closeResultsBtn">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host Settings Modal -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content settings-modal">
+            <div class="modal-header">
+                <h2>⚙️ Game Settings</h2>
+                <button class="modal-close" id="closeSettingsBtn">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="config-section">
+                    <h3>Bankroll & Betting</h3>
+
+                    <div class="form-group">
+                        <label>Starting Bankroll</label>
+                        <input type="number" id="settingStartingBankroll" value="1000" min="100" step="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Minimum Bet</label>
+                        <input type="number" id="settingMinBet" value="10" min="1" step="5">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maximum Bet</label>
+                        <input type="number" id="settingMaxBet" value="500" min="10" step="50">
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Game Rules</h3>
+
+                    <div class="form-group">
+                        <label>Number of Decks</label>
+                        <select id="settingDeckCount">
+                            <option value="1">1 Deck</option>
+                            <option value="2">2 Decks</option>
+                            <option value="4">4 Decks</option>
+                            <option value="6" selected>6 Decks</option>
+                            <option value="8">8 Decks</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Blackjack Payout</label>
+                        <select id="settingBlackjackPayout">
+                            <option value="3:2" selected>3:2 (Standard)</option>
+                            <option value="6:5">6:5 (House favorable)</option>
+                            <option value="2:1">2:1 (Player favorable)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Insurance Payout</label>
+                        <select id="settingInsurancePayout">
+                            <option value="2:1" selected>2:1 (Standard)</option>
+                            <option value="3:2">3:2 (House favorable)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="settingSplitAcesBlackjack" checked>
+                            <span>Split Aces can make Blackjack</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Round Delay (seconds)</label>
+                        <input type="number" id="settingRoundDelay" value="5" min="1" max="30" step="1">
+                    </div>
+                </div>
+
+                <div id="settingsError" class="settings-error" style="display: none;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
+                <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script src="js/app.js"></script>
     <script src="js/ui.js"></script>

@@ -1,1 +1,362 @@
-/* Mobile-specific styles (portrait orientation) */ 
+/* Mobile responsive styles */
+
+@media (max-width: 1024px) {
+    /* Action controls - smaller max-width on tablets */
+    .action-controls-floating {
+        max-width: 350px;
+        top: 100px;
+        right: 15px;
+    }
+
+    .action-controls-compact {
+        padding: 12px;
+    }
+
+    .action-buttons-row {
+        gap: 8px;
+    }
+
+    .btn-action {
+        font-size: 0.95rem;
+        padding: 12px 10px;
+    }
+
+    .player-seats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .settings-grid-footer {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Action controls - position at bottom on mobile */
+    .action-controls-floating {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        max-width: 100%;
+        z-index: 1000;
+    }
+
+    .action-controls-compact {
+        border-radius: 20px 20px 0 0;
+        padding: 12px 15px;
+        animation: slideInUp 0.3s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .action-info-compact {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+    }
+
+    .action-turn-label {
+        font-size: 1rem;
+    }
+
+    .action-hand-indicator {
+        font-size: 0.85rem;
+    }
+
+    .action-buttons-row {
+        gap: 8px;
+    }
+
+    .btn-action {
+        font-size: 0.9rem;
+        padding: 12px 8px;
+    }
+
+    /* Header adjustments */
+    .game-header {
+        padding: 10px 15px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .game-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .header-left,
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .host-settings-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    #phaseText {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+
+    .round-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+
+    .timer-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+
+    .player-name {
+        font-size: 0.95rem;
+    }
+
+    .bankroll {
+        font-size: 1.1rem;
+    }
+
+    /* Player seats - 2 columns on tablet */
+    .player-seats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 0 10px;
+    }
+
+    .player-seat {
+        min-height: 150px;
+        padding: 10px;
+    }
+
+    .seat-label {
+        font-size: 1rem;
+    }
+
+    .seat-player-name {
+        font-size: 0.9rem;
+    }
+
+    /* Table adjustments */
+    .table-container {
+        padding: 20px 10px;
+        min-height: 400px;
+    }
+
+    .table-message {
+        font-size: 1rem;
+        padding: 15px 25px;
+    }
+
+    /* Dealer area */
+    .dealer-info h2 {
+        font-size: 1.3rem;
+    }
+
+    .hand-value {
+        font-size: 1rem;
+        padding: 6px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Join screen */
+    .join-container {
+        padding: 25px;
+    }
+
+    .join-container h1 {
+        font-size: 2rem;
+    }
+
+    .join-form input,
+    .join-form button {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .join-info {
+        padding: 15px;
+    }
+
+    /* Player seats - single column on mobile */
+    .player-seats {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+    }
+
+    .player-seat {
+        min-height: 120px;
+    }
+
+    /* Footer controls */
+    .game-footer {
+        padding: 15px 10px;
+        min-height: 100px;
+    }
+
+    .controls-area {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Table message */
+    .table-message {
+        font-size: 0.9rem;
+        padding: 12px 20px;
+    }
+
+    /* Lobby settings footer - single column on mobile */
+    .settings-grid-footer {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .setting-item-footer {
+        padding: 10px;
+    }
+
+    .lobby-settings-header h3 {
+        font-size: 1rem;
+    }
+
+    /* Modal adjustments */
+    .modal-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .modal-header {
+        padding: 15px 20px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+
+    /* Betting interface - stack vertically */
+    .betting-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .betting-main,
+    .betting-side {
+        width: 100%;
+    }
+
+    .bet-chips {
+        justify-content: center;
+    }
+
+    .chip-btn {
+        flex: 1;
+        min-width: 70px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    .side-bet-item {
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+    }
+
+    .side-bet-input {
+        grid-column: 2;
+        width: 100%;
+    }
+
+    .bet-total {
+        padding: 12px 24px;
+        font-size: 1.1rem;
+    }
+
+    #totalBetAmount {
+        font-size: 1.3rem;
+    }
+
+    .betting-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .btn-game-action {
+        width: 100%;
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+
+    /* Insurance controls */
+    .insurance-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-insurance-yes,
+    .btn-insurance-no {
+        width: 100%;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+        width: 100%;
+    }
+
+    .btn-action {
+        flex: 1 1 45%;
+        min-width: 120px;
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+
+    /* Notifications */
+    .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        font-size: 0.9rem;
+        padding: 12px 20px;
+    }
+}
+
+/* Landscape phone adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+    .table-container {
+        min-height: 300px;
+        padding: 15px 10px;
+    }
+
+    .dealer-area {
+        margin-bottom: 30px;
+    }
+
+    .player-seats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

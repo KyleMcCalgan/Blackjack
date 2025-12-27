@@ -183,11 +183,47 @@
             white-space: pre-wrap;
             word-break: break-all;
         }
+
+        .back-to-game-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            text-decoration: none;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-to-game-btn:hover {
+            background: #4CAF50;
+            color: white;
+            transform: translateX(-3px);
+        }
+
+        .phase-warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #FFC107;
+            color: #FFC107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
-    <h1>🎰 Blackjack Host Setup</h1>
-    <p class="subtitle">Configure your game settings</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div>
+            <h1 style="margin: 0;">🎰 Blackjack Host Setup</h1>
+            <p class="subtitle" style="margin: 5px 0;">Configure your game settings</p>
+        </div>
+        <a href="/" target="_blank" class="back-to-game-btn" title="Back to Game">
+            ← Back to Game
+        </a>
+    </div>
 
     <div id="connectionStatus" class="status disconnected">
         <strong>Status:</strong> <span id="statusText">Connecting...</span>
@@ -275,6 +311,10 @@
         </div>
     </div>
 
+    <div id="phaseWarning" class="phase-warning" style="display: none;">
+        ⚠️ Configuration can only be changed in the lobby phase (before game starts)
+    </div>
+
     <button class="btn" id="saveConfigBtn" disabled>
         Waiting for connection...
     </button>
@@ -332,6 +372,18 @@
             setTimeout(() => {
                 saveBtn.textContent = 'Save Configuration';
             }, 2000);
+        });
+
+        // Listen for config save failures
+        socket.on('config-failed', (data) => {
+            addDebugMessage('Config save failed: ' + data.error);
+            alert('Failed to save configuration: ' + data.error);
+
+            // Show warning about phase
+            const phaseWarning = document.getElementById('phaseWarning');
+            if (phaseWarning) {
+                phaseWarning.style.display = 'block';
+            }
         });
 
         // Get current configuration

@@ -314,10 +314,14 @@ class GameRoom {
 
       console.log(`[GameRoom] ${player.name} bet $${mainBet}`);
 
-      // Mark player as not ready (they need to confirm)
-      player.setReady(false);
+      // DO NOT auto-mark as ready - player must check the ready checkbox
+      // player.setReady(true); // REMOVED
 
       this.broadcastGameState();
+
+      // DO NOT check if all ready here - only when ready checkbox is checked
+      // Players must explicitly click ready after betting
+
       return { success: true };
 
     } catch (error) {
@@ -333,11 +337,18 @@ class GameRoom {
    */
   setPlayerReady(socketId, ready) {
     const player = this.players.get(socketId);
-    if (!player || this.phase !== 'betting') return;
+    if (!player || this.phase !== 'betting') {
+      return { success: false, error: 'Cannot set ready status at this time' };
+    }
 
     // Must have placed a bet to be ready
     if (ready && player.currentBet === 0) {
       return { success: false, error: 'Must place a bet first' };
+    }
+
+    // Once ready, cannot unready (ready is final)
+    if (!ready && player.ready) {
+      return { success: false, error: 'Ready status cannot be changed once set' };
     }
 
     player.setReady(ready);
@@ -345,8 +356,9 @@ class GameRoom {
 
     this.broadcastGameState();
 
-    // Check if all players ready
+    // Check if all players have decided (bet+ready or sat out)
     if (this.allPlayersReady()) {
+      console.log('[GameRoom] All players have decided - ending betting phase');
       this.endBettingPhase();
     }
 
@@ -354,16 +366,113 @@ class GameRoom {
   }
 
   /**
-   * Check if all players are ready
+   * Check if all players have made a decision (ready or eliminated)
    * @returns {Boolean}
    */
   allPlayersReady() {
     for (const player of this.players.values()) {
+      // Player must be either ready (has bet) or eliminated (sat out/no money)
       if (!player.eliminated && !player.ready) {
         return false;
       }
     }
     return true;
+  }
+
+  /**
+   * Cancel a player's bet
+   * @param {String} socketId - Socket ID
+   * @returns {Object} {success, message}
+   */
+  cancelBet(socketId) {
+    const player = this.players.get(socketId);
+
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    if (this.phase !== 'betting') {
+      return { success: false, error: 'Can only cancel bet during betting phase' };
+    }
+
+    if (player.currentBet === 0) {
+      return { success: false, error: 'No bet to cancel' };
+    }
+
+    console.log(`[GameRoom] ${player.name} cancelled their bet`);
+
+    // Return bet to bankroll
+    player.bankroll += player.getTotalBets();
+
+    // Clear bets and ready status
+    player.clearBets();
+    player.setReady(false);
+
+    this.broadcastGameState();
+
+    return { success: true };
+  }
+
+  /**
+   * Player sits out for this round
+   * @param {String} socketId - Socket ID
+   * @returns {Object} {success, message}
+   */
+  sitOutPlayer(socketId) {
+    const player = this.players.get(socketId);
+
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    if (this.phase !== 'betting') {
+      return { success: false, error: 'Can only sit out during betting phase' };
+    }
+
+    console.log(`[GameRoom] ${player.name} is sitting out this round`);
+
+    // Mark player as eliminated and ready (sitting out IS a decision)
+    player.eliminated = true;
+    player.ready = true; // Sitting out means you've decided
+    player.clearBets();
+    player.clearHands();
+
+    this.broadcastGameState();
+
+    // Check if all players have made their decision
+    if (this.allPlayersReady()) {
+      console.log('[GameRoom] All players have decided - ending betting phase');
+      this.endBettingPhase();
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Cancel sit out decision
+   * @param {String} socketId - Socket ID
+   * @returns {Object} {success, message}
+   */
+  cancelSitOut(socketId) {
+    const player = this.players.get(socketId);
+
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    if (this.phase !== 'betting') {
+      return { success: false, error: 'Can only cancel sit out during betting phase' };
+    }
+
+    console.log(`[GameRoom] ${player.name} cancelled sit out`);
+
+    // Re-enable player for this round
+    player.eliminated = false;
+    player.ready = false; // No longer decided
+
+    this.broadcastGameState();
+
+    return { success: true };
   }
 
   /**
@@ -381,6 +490,7 @@ class GameRoom {
       if (!player.ready || player.currentBet === 0) {
         console.log(`[GameRoom] ${player.name} auto-folded (no bet)`);
         player.eliminated = true;
+        player.clearHands(); // Ensure hands are cleared for eliminated players
       }
     }
 
@@ -590,6 +700,22 @@ class GameRoom {
 
     console.log('[GameRoom] Playing phase started');
 
+    // Check if any active players have hands
+    const activePlayers = this.getActivePlayers();
+
+    // Filter to only players with active hands
+    const playersWithActiveHands = activePlayers.filter(p =>
+      p.hands && p.hands.length > 0 && !p.allHandsComplete()
+    );
+
+    console.log(`[GameRoom] ${activePlayers.length} active players, ${playersWithActiveHands.length} with active hands`);
+
+    if (playersWithActiveHands.length === 0) {
+      console.log('[GameRoom] No players with active hands, skipping to dealer turn');
+      this.startDealerTurn();
+      return;
+    }
+
     this.broadcastGameState();
     this.startNextTurn();
   }
@@ -701,8 +827,11 @@ class GameRoom {
             handIndex
           });
 
-          // Automatically stand after double
-          player.stand(handIndex);
+          // Automatically stand after double (only if still active)
+          // Note: addCard() may have already changed status to 'bust' or 'stand'
+          if (player.hands[handIndex].status === 'active') {
+            player.stand(handIndex);
+          }
           this.nextTurn();
           break;
 
@@ -1127,6 +1256,45 @@ class GameRoom {
    */
   generateSessionId() {
     return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Update game configuration (only allowed in lobby with no players or before game starts)
+   * @param {Object} newConfig - New configuration object
+   * @returns {Object} {success, message}
+   */
+  updateConfig(newConfig) {
+    // Only allow config changes in lobby
+    if (this.phase !== 'lobby') {
+      return {
+        success: false,
+        message: 'Cannot change configuration during active game'
+      };
+    }
+
+    // Update config
+    this.config = {
+      startingBankroll: newConfig.startingBankroll || this.config.startingBankroll,
+      minBet: newConfig.minBet || this.config.minBet,
+      maxBet: newConfig.maxBet !== undefined ? newConfig.maxBet : this.config.maxBet,
+      deckCount: newConfig.deckCount || this.config.deckCount,
+      blackjackPayout: newConfig.blackjackPayout || this.config.blackjackPayout,
+      insurancePayout: newConfig.insurancePayout || this.config.insurancePayout,
+      splitAcesBlackjack: newConfig.splitAcesBlackjack !== undefined ? newConfig.splitAcesBlackjack : this.config.splitAcesBlackjack,
+      roundDelay: newConfig.roundDelay !== undefined ? newConfig.roundDelay : this.config.roundDelay
+    };
+
+    // Recreate deck with new deck count if changed
+    if (newConfig.deckCount && newConfig.deckCount !== this.deck.deckCount) {
+      this.deck = new Deck(this.config.deckCount);
+    }
+
+    console.log('[GameRoom] Configuration updated');
+
+    return {
+      success: true,
+      message: 'Configuration updated successfully'
+    };
   }
 }
 

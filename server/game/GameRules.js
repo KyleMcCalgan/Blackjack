@@ -110,7 +110,7 @@ class GameRules {
   }
 
   /**
-   * Check if a hand can be split (pair of same rank)
+   * Check if a hand can be split (pair of same rank or both 10-value cards)
    * @param {Array} cards - Array of card objects
    * @returns {Boolean}
    */
@@ -118,8 +118,16 @@ class GameRules {
     // Must be exactly 2 cards
     if (!cards || cards.length !== 2) return false;
 
-    // Both cards must have same rank
-    return cards[0].rank === cards[1].rank;
+    // Both cards must have same rank OR both must be 10-value cards
+    const card1 = cards[0];
+    const card2 = cards[1];
+
+    // Same rank (traditional split)
+    if (card1.rank === card2.rank) return true;
+
+    // Both are 10-value cards (10, J, Q, K)
+    const isTenValue = (card) => ['10', 'J', 'Q', 'K'].includes(card.rank);
+    return isTenValue(card1) && isTenValue(card2);
   }
 
   /**

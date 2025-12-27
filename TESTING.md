@@ -358,3 +358,11 @@ If you find any bugs, check:
 2. Use `/state` to see current game state
 3. Use `/debug` for additional logging
 4. Check `/server/exports/` for statistics files
+
+
+some further issues I have noticed. The sidebets continue to not work
+
+
+Tried to implement a feature where you have to ready up before allowing you to play but it introduces all sorts of issues. sometimes if you click ready you dont even actually get into the round. majority of the time if you dont click ready you dont get the round at all however. there is occasionally no cancle button. the system needs to be looked at in detail to make sure that the logical flow of the game stays correct and consistent the issues all seem to be connected to the ready button which I believe is being overcomplicated
+
+would like some visual adjust ments especially on mobile. possibly making the playing table smaller for those who arent involved and shifting buttons around 

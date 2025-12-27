@@ -1,1 +1,409 @@
-/* Game table layout and card display */ 
+/* Game table layout and card display */
+
+/* ==================== DEALER AREA ==================== */
+
+.dealer-area {
+    max-width: 800px;
+    margin: 0 auto 60px;
+    text-align: center;
+}
+
+.dealer-info {
+    margin-bottom: 20px;
+}
+
+.dealer-info h2 {
+    font-size: 1.5rem;
+    color: var(--accent-gold);
+    margin-bottom: 10px;
+}
+
+.hand-value {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    min-width: 60px;
+}
+
+.dealer-cards {
+    min-height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ==================== PLAYER SEATS ==================== */
+
+.player-seats {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    padding: 0 20px;
+}
+
+.player-seat {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 15px;
+    min-height: 200px;
+    transition: all 0.3s;
+}
+
+.player-seat:hover {
+    border-color: rgba(255, 215, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Empty Seat */
+.seat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    opacity: 0.5;
+}
+
+.seat-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* Occupied Seat */
+.seat-occupied {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.seat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.seat-player-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-light);
+}
+
+.seat-bankroll {
+    font-weight: bold;
+    color: var(--accent-gold);
+    font-size: 0.95rem;
+}
+
+.seat-cards {
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.seat-bet-info {
+    text-align: center;
+    padding-top: 10px;
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.bet-amount {
+    display: inline-block;
+    background: var(--accent-gold);
+    color: var(--bg-dark);
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+/* Active/Current Player Highlight */
+.player-seat.active {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        border-color: var(--accent-gold);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    }
+    50% {
+        border-color: #ffed4e;
+        box-shadow: 0 0 30px rgba(255, 237, 78, 0.6);
+    }
+}
+
+/* Sitting Out Player Highlight */
+.player-seat.sitting-out {
+    border-color: var(--accent-red);
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.player-seat.sitting-out .seat-player-name {
+    color: var(--accent-red);
+}
+
+/* Host Badge */
+.seat-player-name::after {
+    content: '';
+}
+
+.player-seat.host .seat-player-name::after {
+    content: ' 👑';
+}
+
+/* ==================== TABLE CENTER ==================== */
+
+.table-center {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.table-message {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px 30px;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    max-width: 90vw;
+    margin: 0 auto;
+}
+
+/* ==================== CARD CONTAINERS ==================== */
+
+.card-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Hand Container (for multiple hands from splits) */
+.hand-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.hand {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.hand.single-hand {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hand.single-hand > .playing-card {
+    margin: 0;
+}
+
+/* Active hand indicator */
+.hand.active-hand {
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    }
+}
+
+.hand-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 6px;
+    min-width: 80px;
+}
+
+.hand-value-display {
+    font-weight: bold;
+    color: var(--accent-gold);
+    font-size: 1.2rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.hand-bet-display {
+    font-weight: bold;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.doubled-indicator {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulse-double 1.5s ease-in-out infinite;
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+}
+
+@keyframes pulse-double {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+/* ==================== PLAYING CARDS ==================== */
+
+.playing-card {
+    width: 70px;
+    height: 100px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    transition: transform 0.3s;
+    cursor: default;
+}
+
+.playing-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Card Rank and Suit */
+.card-rank {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.card-suit {
+    font-size: 1.8rem;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+/* Card Colors */
+.card-red {
+    color: #dc3545;
+}
+
+.card-black {
+    color: #000000;
+}
+
+/* Small rank/suit in corners */
+.card-corner {
+    position: absolute;
+    font-size: 0.7rem;
+    font-weight: bold;
+    line-height: 0.9;
+}
+
+.card-corner.top-left {
+    top: 4px;
+    left: 4px;
+}
+
+.card-corner.bottom-right {
+    bottom: 4px;
+    right: 4px;
+    transform: rotate(180deg);
+}
+
+/* Card Back (face down) */
+.playing-card.face-down {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);
+    border: 2px solid #1565c0;
+}
+
+.card-back-pattern {
+    width: 100%;
+    height: 100%;
+    background-image:
+        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px),
+        repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);
+    border-radius: 6px;
+}
+
+/* Card Animation */
+@keyframes dealCard {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.playing-card.dealing {
+    animation: dealCard 0.3s ease-out;
+}
+
+/* ==================== PLACEHOLDER CARDS (for empty state) ==================== */
+
+.placeholder-card {
+    width: 60px;
+    height: 90px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 2rem;
+}

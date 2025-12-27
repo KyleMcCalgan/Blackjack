@@ -133,6 +133,36 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('cancel-bet', () => {
+    const result = gameRoom.cancelBet(socket.id);
+
+    if (result && result.success) {
+      socket.emit('bet-cancelled', { success: true });
+    } else {
+      socket.emit('cancel-bet-failed', { error: result?.error || 'Failed to cancel bet' });
+    }
+  });
+
+  socket.on('sit-out', () => {
+    const result = gameRoom.sitOutPlayer(socket.id);
+
+    if (result && result.success) {
+      socket.emit('sit-out-confirmed', { success: true });
+    } else {
+      socket.emit('sit-out-failed', { error: result?.error || 'Failed to sit out' });
+    }
+  });
+
+  socket.on('cancel-sit-out', () => {
+    const result = gameRoom.cancelSitOut(socket.id);
+
+    if (result && result.success) {
+      socket.emit('cancel-sit-out-confirmed', { success: true });
+    } else {
+      socket.emit('cancel-sit-out-failed', { error: result?.error || 'Failed to cancel sit out' });
+    }
+  });
+
   // ===== INSURANCE PHASE =====
 
   socket.on('place-insurance', (data) => {
@@ -177,26 +207,20 @@ io.on('connection', (socket) => {
     console.log(`[${new Date().toLocaleTimeString()}] Config saved by ${socket.id}:`);
     console.log(JSON.stringify(config, null, 2));
 
-    // Only allow config changes in lobby
-    if (gameRoom.phase !== 'lobby') {
+    // Update config on existing game room (preserves players)
+    const result = gameRoom.updateConfig(config);
+
+    if (!result.success) {
       socket.emit('config-failed', {
-        error: 'Cannot change configuration during active game'
+        error: result.message
       });
       return;
     }
 
-    gameConfig = { ...gameConfig, ...config };
+    // Update global config
+    gameConfig = { ...gameRoom.config };
 
-    // Reinitialize game room with new config
-    gameRoom = new GameRoom(io, gameConfig);
-    statistics = new Statistics(gameRoom);
-    testMode = new TestMode(gameRoom);
-    adminCommands = new AdminCommands(gameRoom, statistics, testMode, adminCommands.ngrokUrl);
-
-    // Set testMode reference in gameRoom for autoplay checks
-    gameRoom.testMode = testMode;
-
-    console.log('[Server] Game room reinitialized with new config');
+    console.log('[Server] Configuration updated successfully');
 
     socket.emit('config-saved', {
       success: true,
@@ -204,6 +228,7 @@ io.on('connection', (socket) => {
       timestamp: new Date().toISOString()
     });
 
+    // Broadcast config update to all connected clients
     io.emit('config-update', { config: gameConfig });
   });
 

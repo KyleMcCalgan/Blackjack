@@ -538,6 +538,9 @@ class Player {
     // Check if bankrupt
     if (this.isBankrupt()) {
       this.eliminated = true;
+    } else {
+      // Re-enable players who have money
+      this.eliminated = false;
     }
   }
 

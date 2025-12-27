@@ -157,7 +157,8 @@ class Dealer {
     let cards = [...this.hand];
 
     // Hide hole card if requested (before dealer turn)
-    if (hideHole && this.hand.length >= 2 && !this.isComplete) {
+    // hideHole parameter takes precedence over isComplete status
+    if (hideHole && this.hand.length >= 2) {
       cards = [
         this.upCard,
         { rank: '?', suit: '?', value: 0 } // Hidden card
@@ -168,8 +169,8 @@ class Dealer {
       cards,
       upCard: this.upCard,
       cardCount: this.hand.length,
-      value: hideHole && !this.isComplete ? null : value,
-      isSoft: hideHole && !this.isComplete ? null : isSoft,
+      value: hideHole ? null : value,
+      isSoft: hideHole ? null : isSoft,
       hasBlackjack: this.hasBlackjack,
       isBust: this.isBust,
       isComplete: this.isComplete
