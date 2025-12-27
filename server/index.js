@@ -5,6 +5,12 @@ const ngrok = require('@ngrok/ngrok');
 const path = require('path');
 const readline = require('readline');
 
+// Import game classes
+const GameRoom = require('./game/GameRoom');
+const Statistics = require('./admin/Statistics');
+const TestMode = require('./admin/TestMode');
+const AdminCommands = require('./admin/AdminCommands');
+
 const PORT = 3000;
 
 // Initialize Express app
@@ -24,54 +30,208 @@ app.get('/host', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/host.html'));
 });
 
-// Game state storage
+// Default game configuration
 let gameConfig = {
   startingBankroll: 1000,
   minBet: 10,
-  maxBet: 500, // null = no limit
+  maxBet: 500,
   deckCount: 6,
   blackjackPayout: '3:2',
   insurancePayout: '2:1',
-  splitAcesBlackjack: true
+  splitAcesBlackjack: true,
+  roundDelay: 5
 };
 
-// Socket.IO connection handling
+// Initialize game systems
+let gameRoom = new GameRoom(io, gameConfig);
+let statistics = new Statistics(gameRoom);
+let testMode = new TestMode(gameRoom);
+let adminCommands = new AdminCommands(gameRoom, statistics, testMode);
+
+// Set testMode reference in gameRoom for autoplay checks
+gameRoom.testMode = testMode;
+
+console.log('[Server] Game systems initialized');
+
+// ==================== SOCKET.IO EVENT HANDLERS ====================
+
 io.on('connection', (socket) => {
   console.log(`[${new Date().toLocaleTimeString()}] Player connected: ${socket.id}`);
 
-  socket.on('disconnect', () => {
-    console.log(`[${new Date().toLocaleTimeString()}] Player disconnected: ${socket.id}`);
+  // ===== LOBBY & CONNECTION =====
+
+  socket.on('join-game', (data) => {
+    const { playerName } = data;
+    console.log(`[${new Date().toLocaleTimeString()}] ${playerName} attempting to join`);
+
+    const result = gameRoom.addPlayer(socket.id, playerName);
+
+    if (result.success) {
+      socket.emit('join-success', {
+        seat: result.seat,
+        player: result.player
+      });
+
+      io.emit('player-joined', {
+        playerId: socket.id,
+        playerName: playerName,
+        seat: result.seat
+      });
+    } else {
+      socket.emit('join-failed', {
+        error: result.error
+      });
+    }
   });
 
-  // Host configuration events
+  socket.on('disconnect', () => {
+    console.log(`[${new Date().toLocaleTimeString()}] Player disconnected: ${socket.id}`);
+    gameRoom.removePlayer(socket.id);
+
+    io.emit('player-left', {
+      playerId: socket.id
+    });
+  });
+
+  socket.on('transfer-host', (data) => {
+    const { targetPlayerId } = data;
+    gameRoom.transferHost(targetPlayerId);
+  });
+
+  socket.on('start-game', () => {
+    const player = gameRoom.players.get(socket.id);
+    if (player && player.isHost) {
+      gameRoom.startGame();
+    } else {
+      socket.emit('error', { message: 'Only host can start the game' });
+    }
+  });
+
+  // ===== BETTING PHASE =====
+
+  socket.on('place-bet', (data) => {
+    const { mainBet, sideBets } = data;
+
+    const result = gameRoom.placeBet(socket.id, mainBet, sideBets);
+
+    if (result && result.success) {
+      socket.emit('bet-placed', { success: true });
+    } else {
+      socket.emit('bet-failed', { error: result?.error || 'Bet failed' });
+    }
+  });
+
+  socket.on('ready-bet', (data) => {
+    const { ready } = data;
+
+    const result = gameRoom.setPlayerReady(socket.id, ready);
+
+    if (result && result.success) {
+      socket.emit('ready-confirmed', { ready });
+    } else {
+      socket.emit('ready-failed', { error: result?.error || 'Failed to set ready status' });
+    }
+  });
+
+  // ===== INSURANCE PHASE =====
+
+  socket.on('place-insurance', (data) => {
+    const { takesInsurance } = data;
+
+    const result = gameRoom.placeInsurance(socket.id, takesInsurance);
+
+    if (result && result.success) {
+      socket.emit('insurance-placed', { success: true });
+    } else {
+      socket.emit('insurance-failed', { error: result?.error || 'Insurance failed' });
+    }
+  });
+
+  // ===== PLAYING PHASE =====
+
+  socket.on('player-action', (data) => {
+    const { action, handIndex } = data;
+
+    const result = gameRoom.handlePlayerAction(socket.id, action, handIndex);
+
+    if (result && result.success) {
+      socket.emit('action-confirmed', { action, handIndex });
+    } else {
+      socket.emit('action-failed', { error: result?.error || 'Action failed' });
+    }
+  });
+
+  socket.on('pre-select-action', (data) => {
+    const { action, handIndex } = data;
+
+    const result = gameRoom.setPreAction(socket.id, action, handIndex);
+
+    if (result && result.success) {
+      socket.emit('pre-action-set', { action, handIndex });
+    }
+  });
+
+  // ===== CONFIGURATION =====
+
   socket.on('save-config', (config) => {
     console.log(`[${new Date().toLocaleTimeString()}] Config saved by ${socket.id}:`);
     console.log(JSON.stringify(config, null, 2));
 
-    gameConfig = { ...config };
+    // Only allow config changes in lobby
+    if (gameRoom.phase !== 'lobby') {
+      socket.emit('config-failed', {
+        error: 'Cannot change configuration during active game'
+      });
+      return;
+    }
 
-    // Send confirmation back to client
+    gameConfig = { ...gameConfig, ...config };
+
+    // Reinitialize game room with new config
+    gameRoom = new GameRoom(io, gameConfig);
+    statistics = new Statistics(gameRoom);
+    testMode = new TestMode(gameRoom);
+    adminCommands = new AdminCommands(gameRoom, statistics, testMode, adminCommands.ngrokUrl);
+
+    // Set testMode reference in gameRoom for autoplay checks
+    gameRoom.testMode = testMode;
+
+    console.log('[Server] Game room reinitialized with new config');
+
     socket.emit('config-saved', {
       success: true,
       config: gameConfig,
       timestamp: new Date().toISOString()
     });
+
+    io.emit('config-update', { config: gameConfig });
   });
 
-  socket.on('config-update', (config) => {
-    console.log(`[${new Date().toLocaleTimeString()}] Config update from ${socket.id}:`);
-    console.log(JSON.stringify(config, null, 2));
-
-    gameConfig = { ...config };
+  socket.on('get-config', () => {
+    socket.emit('config-update', { config: gameConfig });
   });
 
-  // Placeholder for game events
-  socket.on('join-game', (data) => {
-    console.log(`[${new Date().toLocaleTimeString()}] Join request:`, data);
+  // ===== GENERAL =====
+
+  socket.on('request-player-info', (data) => {
+    const { playerId } = data;
+    const player = gameRoom.players.get(playerId);
+
+    if (player) {
+      socket.emit('player-info', {
+        playerId: playerId,
+        detailedInfo: player.toJSON(true) // Include stats
+      });
+    }
+  });
+
+  socket.on('error', (error) => {
+    console.error(`[Socket Error] ${socket.id}:`, error);
   });
 });
 
-// Admin console commands
+// ==================== ADMIN CONSOLE ====================
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -79,69 +239,34 @@ const rl = readline.createInterface({
 });
 
 console.log('\n========================================');
-console.log('Admin Console Commands:');
+console.log('Admin Console Ready');
 console.log('========================================');
-console.log('/help       - Show available commands');
-console.log('/info       - Display server info');
-console.log('/players    - List connected players');
-console.log('/url        - Display ngrok URL');
+console.log('Type /help for available commands');
 console.log('========================================\n');
 
 rl.on('line', (input) => {
-  const command = input.trim();
+  const trimmed = input.trim();
 
-  switch (command) {
-    case '/help':
-      console.log('\nAvailable Commands:');
-      console.log('/help       - Show this help message');
-      console.log('/info       - Display server configuration');
-      console.log('/config     - View current game configuration');
-      console.log('/players    - List all connected players');
-      console.log('/url        - Display ngrok public URL');
-      console.log('/start      - Force start game (future)');
-      console.log('/end        - End game session (future)');
-      console.log('/stats      - Show statistics (future)');
-      console.log('/export     - Export statistics (future)');
-      console.log('/test-mode  - Toggle test mode (future)\n');
-      break;
-
-    case '/info':
-      console.log('\nServer Information:');
-      console.log(`Local URL: http://localhost:${PORT}`);
-      console.log(`Connected clients: ${io.engine.clientsCount}`);
-      console.log(`Status: Running\n`);
-      break;
-
-    case '/config':
-      console.log('\nCurrent Game Configuration:');
-      console.log(JSON.stringify(gameConfig, null, 2));
-      console.log('');
-      break;
-
-    case '/players':
-      const sockets = io.sockets.sockets;
-      console.log(`\nConnected Players (${sockets.size}):`);
-      sockets.forEach((socket) => {
-        console.log(`  - ${socket.id}`);
-      });
-      console.log('');
-      break;
-
-    case '/url':
-      console.log('\nUse /info to see the ngrok URL after startup\n');
-      break;
-
-    default:
-      if (command.startsWith('/')) {
-        console.log(`Unknown command: ${command}. Type /help for available commands.\n`);
-      }
-      break;
+  if (!trimmed) {
+    rl.prompt();
+    return;
   }
+
+  if (!trimmed.startsWith('/')) {
+    console.log('Commands must start with /. Type /help for available commands.\n');
+    rl.prompt();
+    return;
+  }
+
+  // Execute command
+  const output = adminCommands.execute(trimmed);
+  console.log(output);
 
   rl.prompt();
 });
 
-// Start server
+// ==================== SERVER STARTUP ====================
+
 server.listen(PORT, async () => {
   console.log('\n========================================');
   console.log('🎰 Blackjack Game Server Started!');
@@ -157,6 +282,9 @@ server.listen(PORT, async () => {
     });
 
     const publicUrl = listener.url();
+
+    // Update admin commands with ngrok URL
+    adminCommands.setNgrokUrl(publicUrl);
 
     console.log('========================================');
     console.log(`Public URL: ${publicUrl}`);
@@ -180,12 +308,35 @@ server.listen(PORT, async () => {
   }
 });
 
-// Graceful shutdown
+// ==================== GRACEFUL SHUTDOWN ====================
+
 process.on('SIGINT', () => {
   console.log('\n\nShutting down server...');
+
+  // Export statistics before shutdown
+  if (statistics && gameRoom.roundNumber > 0) {
+    console.log('Exporting final statistics...');
+    const result = statistics.exportToJSON();
+    if (result.success) {
+      console.log(`Statistics exported to: ${result.filePath}`);
+    }
+  }
+
   rl.close();
+
   server.close(() => {
     console.log('Server closed. Goodbye!');
     process.exit(0);
   });
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('\n[CRITICAL ERROR]', error);
+  console.log('Server will continue running, but this should be investigated.');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('\n[UNHANDLED REJECTION]', reason);
+  console.log('Promise:', promise);
 });
