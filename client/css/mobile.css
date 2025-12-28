@@ -1,15 +1,22 @@
 /* Mobile responsive styles */
 
-@media (max-width: 1024px) {
-    /* Action controls - smaller max-width on tablets */
-    .action-controls-floating {
-        max-width: 350px;
-        top: 100px;
-        right: 15px;
+/* Smooth scrolling for all mobile devices */
+@media (max-width: 768px) {
+    html {
+        scroll-behavior: smooth;
     }
 
+    body {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 1024px) {
+    /* Action controls - already in footer */
     .action-controls-compact {
         padding: 12px;
+        max-width: 500px;
     }
 
     .action-buttons-row {
@@ -33,32 +40,11 @@
 }
 
 @media (max-width: 768px) {
-    /* Action controls - position at bottom on mobile */
-    .action-controls-floating {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        top: auto;
-        max-width: 100%;
-        z-index: 1000;
-    }
-
+    /* Action controls - already in footer, just adjust styling */
     .action-controls-compact {
-        border-radius: 20px 20px 0 0;
+        border-radius: 12px;
         padding: 12px 15px;
-        animation: slideInUp 0.3s ease-out;
-    }
-
-    @keyframes slideInUp {
-        from {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        max-width: 100%;
     }
 
     .action-info-compact {
@@ -98,6 +84,33 @@
     .header-right {
         width: 100%;
         justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    /* Sticky Action Bar on mobile */
+    .action-bar-content {
+        padding: 12px 15px;
+        gap: 8px;
+    }
+
+    .btn-sit-out-action,
+    .btn-rejoin-action,
+    .btn-cancel-action {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+
+    .btn-place-bet-action {
+        padding: 12px 24px;
+        font-size: 0.95rem;
+    }
+
+    .ready-label-inline {
+        padding: 8px 12px;
+    }
+
+    .ready-label-inline span {
+        font-size: 0.85rem;
     }
 
     .host-settings-btn {
@@ -148,29 +161,127 @@
         font-size: 0.9rem;
     }
 
-    /* Table adjustments */
+    .bet-label {
+        font-size: 0.65rem;
+    }
+
+    .side-bet-indicator {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+    }
+
+    /* Table adjustments - more compact on mobile */
     .table-container {
-        padding: 20px 10px;
-        min-height: 400px;
+        padding: 15px 10px 200px 10px;
+        min-height: auto;
     }
 
     .table-message {
-        font-size: 1rem;
-        padding: 15px 25px;
+        font-size: 0.95rem;
+        padding: 12px 20px;
     }
 
-    /* Dealer area */
+    /* Dealer area - more compact */
+    .dealer-area {
+        margin-bottom: 15px;
+    }
+
     .dealer-info h2 {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+    }
+
+    .dealer-cards {
+        min-height: 90px;
+        gap: 6px;
     }
 
     .hand-value {
-        font-size: 1rem;
-        padding: 6px 15px;
+        font-size: 0.95rem;
+        padding: 5px 12px;
     }
 }
 
 @media (max-width: 480px) {
+    /* MOBILE FULL-SCREEN MODES */
+    /* Smooth transitions between phases */
+    .table-container,
+    .game-footer {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Hide table during betting phase - show only betting interface */
+    body:has(#stickyActionBar[style*="display: block"]) .table-container {
+        display: none !important;
+    }
+
+    /* Hide footer during non-betting phases - show only table/action controls */
+    body:has(#stickyActionBar[style*="display: none"]) .game-footer,
+    body:has(#stickyActionBar[style*="display: none"]) .sticky-action-bar {
+        display: none !important;
+    }
+
+    /* Make footer take full screen during betting */
+    body:has(#stickyActionBar[style*="display: block"]) .game-footer {
+        position: fixed;
+        top: 80px; /* Below header */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+        padding: 20px;
+        background: var(--bg-primary);
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Adjust sticky action bar position when footer is full screen */
+    body:has(#stickyActionBar[style*="display: block"]) .sticky-action-bar {
+        position: fixed;
+        bottom: 0;
+    }
+
+    /* During playing phase - make table full screen */
+    body:not(:has(#stickyActionBar[style*="display: block"])) .table-container {
+        padding-bottom: 20px !important;
+        height: calc(100vh - 80px); /* Full height minus header */
+        animation: fadeIn 0.3s ease;
+    }
+
+    /* Hide table-related elements when in full screen betting mode */
+    body:has(#stickyActionBar[style*="display: block"]) #lobbySettings,
+    body:has(#stickyActionBar[style*="display: block"]) .table-message,
+    body:has(#stickyActionBar[style*="display: block"]) .table-center {
+        display: none !important;
+    }
+
+    /* Optimize header during full screen modes */
+    body:has(#stickyActionBar[style*="display: block"]) .game-header {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Make betting chips larger and more touch-friendly in full screen mode */
+    body:has(#stickyActionBar[style*="display: block"]) .poker-chip,
+    body:has(#stickyActionBar[style*="display: block"]) .poker-chip-small {
+        min-width: 65px !important;
+        max-width: 65px !important;
+        height: 65px !important;
+        font-size: 0.9rem !important;
+    }
+
     /* Join screen */
     .join-container {
         padding: 25px;
@@ -190,20 +301,82 @@
         padding: 15px;
     }
 
-    /* Player seats - single column on mobile */
+    /* Player seats - single column on mobile, hide empty seats */
     .player-seats {
         grid-template-columns: 1fr;
         max-width: 400px;
+        gap: 8px;
+        margin-bottom: 10px;
     }
 
     .player-seat {
-        min-height: 120px;
+        min-height: 100px;
+        padding: 8px;
     }
 
-    /* Footer controls */
+    /* Hide empty seats on mobile to reduce scrolling */
+    /* Only hide seats where the occupied section is hidden (meaning they're empty) */
+    .player-seat:has(.seat-occupied[style*="display: none"]) {
+        display: none !important;
+    }
+
+    /* Compact player cards on mobile */
+    .seat-cards {
+        gap: 4px;
+        min-height: 60px;
+    }
+
+    .playing-card {
+        width: 50px !important;
+        height: 70px !important;
+        font-size: 0.7rem;
+    }
+
+    .card-corner {
+        font-size: 0.65rem;
+        padding: 2px;
+    }
+
+    .card-rank {
+        font-size: 1.2rem;
+    }
+
+    .card-suit {
+        font-size: 1.2rem;
+    }
+
+    /* Footer controls - sticky on mobile during betting */
     .game-footer {
-        padding: 15px 10px;
-        min-height: 100px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 10px;
+        background: linear-gradient(to top, var(--bg-secondary) 90%, rgba(26, 92, 26, 0.95));
+        border-top: 3px solid var(--accent-gold);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+        z-index: 500;
+        max-height: 65vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Subtle scroll indicator */
+    .game-footer::before {
+        content: '';
+        position: sticky;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(to bottom, rgba(255, 215, 0, 0.3), transparent);
+        display: block;
+        pointer-events: none;
+    }
+
+    /* Add padding to main content to prevent footer overlap */
+    .table-container {
+        padding-bottom: 250px !important;
     }
 
     .controls-area {
@@ -262,22 +435,102 @@
     /* Betting interface - stack vertically */
     .betting-container {
         flex-direction: column;
-        gap: 20px;
+        gap: 15px;
+        padding-bottom: 20px;
     }
 
-    .betting-main,
+    /* Full screen betting on mobile */
+    body:has(#stickyActionBar[style*="display: block"]) .betting-container {
+        padding-top: 10px;
+        padding-bottom: 80px; /* Space for sticky action bar at bottom */
+        max-width: 100%;
+    }
+
+    /* Add helpful title to betting section in full screen mode */
+    body:has(#stickyActionBar[style*="display: block"]) .betting-container::before {
+        content: "Place Your Bets";
+        display: block;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: var(--accent-gold);
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .betting-main {
+        width: 100%;
+    }
+
     .betting-side {
         width: 100%;
     }
 
+    /* Collapsible side bets on mobile - collapsed by default */
+    .betting-side {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 10px;
+    }
+
+    /* Side bets collapsed by default on mobile - use class for toggleability */
+    .side-bets-list {
+        display: none;
+        max-height: 150px;
+    }
+
+    /* When opened by JavaScript */
+    .side-bets-list.open {
+        display: block !important;
+    }
+
+    .side-bets-toggle {
+        width: 100%;
+        padding: 10px 15px;
+        background: rgba(255, 215, 0, 0.1);
+        border: 2px solid var(--accent-gold);
+        border-radius: 8px;
+        color: var(--accent-gold);
+        font-size: 0.95rem;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .side-bets-toggle:hover {
+        background: rgba(255, 215, 0, 0.2);
+    }
+
+    .side-bets-toggle .toggle-icon {
+        transition: transform 0.3s;
+    }
+
     .bet-chips {
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .poker-chip,
+    .poker-chip-small {
+        min-width: 55px;
+        max-width: 55px;
+        height: 55px;
+        font-size: 0.8rem;
+    }
+
+    .chip-value {
+        font-size: 0.85rem;
     }
 
     .chip-btn {
         flex: 1;
-        min-width: 70px;
-        padding: 8px 12px;
+        min-width: 65px;
+        padding: 8px 10px;
         font-size: 0.85rem;
     }
 
@@ -310,6 +563,34 @@
         width: 100%;
         padding: 12px 30px;
         font-size: 1rem;
+    }
+
+    /* Decision checkboxes - more compact on mobile */
+    .decision-checkboxes {
+        gap: 8px;
+        padding: 10px 0;
+    }
+
+    .checkbox-container {
+        margin: 0;
+    }
+
+    .btn-sit-out,
+    .btn-rejoin {
+        width: 100%;
+        padding: 10px 20px;
+        font-size: 0.95rem;
+    }
+
+    /* Bet total - more compact */
+    .bet-total {
+        padding: 10px 20px;
+        font-size: 1rem;
+        margin-bottom: 8px;
+    }
+
+    #totalBetAmount {
+        font-size: 1.2rem;
     }
 
     /* Insurance controls */

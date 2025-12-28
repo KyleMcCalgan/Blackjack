@@ -99,7 +99,11 @@
                         </div>
                         <div class="seat-cards"></div>
                         <div class="seat-bet-info">
-                            <span class="bet-amount"></span>
+                            <div class="main-bet">
+                                <span class="bet-label">Main Bet:</span>
+                                <span class="bet-amount"></span>
+                            </div>
+                            <div class="side-bets-display"></div>
                         </div>
                     </div>
                 </div>
@@ -116,7 +120,11 @@
                         </div>
                         <div class="seat-cards"></div>
                         <div class="seat-bet-info">
-                            <span class="bet-amount"></span>
+                            <div class="main-bet">
+                                <span class="bet-label">Main Bet:</span>
+                                <span class="bet-amount"></span>
+                            </div>
+                            <div class="side-bets-display"></div>
                         </div>
                     </div>
                 </div>
@@ -133,7 +141,11 @@
                         </div>
                         <div class="seat-cards"></div>
                         <div class="seat-bet-info">
-                            <span class="bet-amount"></span>
+                            <div class="main-bet">
+                                <span class="bet-label">Main Bet:</span>
+                                <span class="bet-amount"></span>
+                            </div>
+                            <div class="side-bets-display"></div>
                         </div>
                     </div>
                 </div>
@@ -150,7 +162,11 @@
                         </div>
                         <div class="seat-cards"></div>
                         <div class="seat-bet-info">
-                            <span class="bet-amount"></span>
+                            <div class="main-bet">
+                                <span class="bet-label">Main Bet:</span>
+                                <span class="bet-amount"></span>
+                            </div>
+                            <div class="side-bets-display"></div>
                         </div>
                     </div>
                 </div>
@@ -167,7 +183,11 @@
                         </div>
                         <div class="seat-cards"></div>
                         <div class="seat-bet-info">
-                            <span class="bet-amount"></span>
+                            <div class="main-bet">
+                                <span class="bet-label">Main Bet:</span>
+                                <span class="bet-amount"></span>
+                            </div>
+                            <div class="side-bets-display"></div>
                         </div>
                     </div>
                 </div>
@@ -212,6 +232,24 @@
                 <!-- Controls will be added dynamically based on game phase -->
             </div>
         </footer>
+
+        <!-- Sticky Action Bar (betting phase only) -->
+        <div id="stickyActionBar" class="sticky-action-bar" style="display: none;">
+            <div class="action-bar-content">
+                <button class="btn-sit-out-action" id="sitOutBtnAction" style="display: none;">Sit Out</button>
+                <button class="btn-rejoin-action" id="rejoinBtnAction" style="display: none;">Rejoin</button>
+
+                <div class="action-bar-ready" id="actionBarReady" style="display: none;">
+                    <label class="ready-label-inline">
+                        <input type="checkbox" id="readyCheckboxAction" disabled>
+                        <span>Ready</span>
+                    </label>
+                </div>
+
+                <button class="btn-cancel-action" id="cancelBetBtnAction" style="display: none;">Cancel Bet</button>
+                <button class="btn-place-bet-action" id="placeBetBtnAction" style="display: none;">Place Bet</button>
+            </div>
+        </div>
     </div>
 
     <!-- Results Modal -->

@@ -360,9 +360,9 @@ If you find any bugs, check:
 4. Check `/server/exports/` for statistics files
 
 
-some further issues I have noticed. The sidebets continue to not work
+No longer able to hit stand etc on mobile, that needs a complete overhall
 
+I split cards, pulled a 10 and an ace and the only option that I had was to double 
 
-Tried to implement a feature where you have to ready up before allowing you to play but it introduces all sorts of issues. sometimes if you click ready you dont even actually get into the round. majority of the time if you dont click ready you dont get the round at all however. there is occasionally no cancle button. the system needs to be looked at in detail to make sure that the logical flow of the game stays correct and consistent the issues all seem to be connected to the ready button which I believe is being overcomplicated
+when you open the side bets on the fullscreen version it makes the container to its left which is the one with the chips resize and thats just super weird
 
-would like some visual adjust ments especially on mobile. possibly making the playing table smaller for those who arent involved and shifting buttons around 

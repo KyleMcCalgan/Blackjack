@@ -256,6 +256,12 @@ function handleGameState(state) {
         // Sync ready checkbox and cancel button state with server state
         if (state.phase === 'betting') {
             syncBettingUIWithServerState(currentPlayer);
+        } else {
+            // Hide sticky action bar when not in betting phase
+            const stickyActionBar = document.getElementById('stickyActionBar');
+            if (stickyActionBar) {
+                stickyActionBar.style.display = 'none';
+            }
         }
     }
 }
@@ -326,20 +332,14 @@ function handleReadyConfirmed(data) {
     // Clear pending flag
     gameState.readyRequestPending = false;
 
-    const readyCheckbox = document.getElementById('readyCheckbox');
-    const cancelBetBtn = document.getElementById('cancelBetBtn');
-    const checkboxLabel = readyCheckbox?.closest('.checkbox-label');
-
-    // Remove loading state
-    if (checkboxLabel) {
-        checkboxLabel.classList.remove('loading');
-    }
+    const readyCheckboxAction = document.getElementById('readyCheckboxAction');
+    const cancelBetBtn = document.getElementById('cancelBetBtnAction');
 
     if (data.ready) {
         // Lock ready checkbox (can't uncheck)
-        if (readyCheckbox) {
-            readyCheckbox.disabled = true;
-            readyCheckbox.checked = true;
+        if (readyCheckboxAction) {
+            readyCheckboxAction.disabled = true;
+            readyCheckboxAction.checked = true;
         }
 
         // Disable cancel button when ready
@@ -359,18 +359,12 @@ function handleReadyFailed(data) {
     // Clear pending flag
     gameState.readyRequestPending = false;
 
-    const readyCheckbox = document.getElementById('readyCheckbox');
-    const checkboxLabel = readyCheckbox?.closest('.checkbox-label');
-
-    // Remove loading state
-    if (checkboxLabel) {
-        checkboxLabel.classList.remove('loading');
-    }
+    const readyCheckboxAction = document.getElementById('readyCheckboxAction');
 
     // Uncheck checkbox and keep it enabled
-    if (readyCheckbox) {
-        readyCheckbox.checked = false;
-        readyCheckbox.disabled = false;
+    if (readyCheckboxAction) {
+        readyCheckboxAction.checked = false;
+        readyCheckboxAction.disabled = false;
     }
 
     // Show error notification
@@ -459,8 +453,31 @@ function updatePlayerSeats(players, seats) {
 
         // Show bet if exists
         if (player.currentBet > 0) {
+            // Show main bet amount
             seatElement.querySelector('.bet-amount').textContent = '$' + player.currentBet;
             seatElement.querySelector('.seat-bet-info').style.display = 'block';
+
+            // Show side bet indicators
+            const sideBetsDisplay = seatElement.querySelector('.side-bets-display');
+            if (sideBetsDisplay) {
+                sideBetsDisplay.innerHTML = '';
+
+                const sideBetIndicators = [];
+
+                if (player.sideBets?.perfectPairs > 0) {
+                    sideBetIndicators.push(`<span class="side-bet-indicator pp">PP: $${player.sideBets.perfectPairs}</span>`);
+                }
+                if (player.sideBets?.bustIt > 0) {
+                    sideBetIndicators.push(`<span class="side-bet-indicator bi">BI: $${player.sideBets.bustIt}</span>`);
+                }
+                if (player.sideBets?.twentyOnePlus3 > 0) {
+                    sideBetIndicators.push(`<span class="side-bet-indicator tp">21+3: $${player.sideBets.twentyOnePlus3}</span>`);
+                }
+
+                if (sideBetIndicators.length > 0) {
+                    sideBetsDisplay.innerHTML = sideBetIndicators.join('');
+                }
+            }
         } else {
             seatElement.querySelector('.seat-bet-info').style.display = 'none';
         }
@@ -620,7 +637,7 @@ function showBettingInterface(state) {
                     <span>Side Bets (Optional)</span>
                     <span class="toggle-icon">▼</span>
                 </button>
-                <div class="side-bets-list" id="sideBetsList" style="display: none;">
+                <div class="side-bets-list" id="sideBetsList">
                     <div class="side-bet-option">
                         <div class="side-bet-header">
                             <span class="side-bet-name">Perfect Pairs</span>
@@ -677,32 +694,6 @@ function showBettingInterface(state) {
                 </div>
             </div>
 
-            <div class="betting-actions">
-                <div class="bet-total">
-                    Total: <span id="totalBetAmount">$0</span>
-                </div>
-
-                <div class="decision-checkboxes">
-                    <button class="btn-sit-out" id="sitOutBtn" style="display: none;">Sit Out This Round</button>
-                    <button class="btn-rejoin" id="rejoinBtn" style="display: none;">Rejoin Game</button>
-
-                    <div class="checkbox-container" id="readyCheckboxContainer" style="display: none;">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="readyCheckbox" disabled>
-                            <span class="checkbox-text">I'm Ready</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="betting-buttons">
-                    <button class="btn-game-action btn-place-bet" id="placeBetBtn">
-                        Place Bet
-                    </button>
-                    <button class="btn-game-action btn-cancel-bet" id="cancelBetBtn" style="display: none;">
-                        Cancel Bet
-                    </button>
-                </div>
-            </div>
         </div>
     `;
 
@@ -736,13 +727,17 @@ function setupBettingControls(minBet, maxBet) {
         }
     }
 
-    // Side bets toggle
+    // Side bets toggle - use class instead of inline styles to work with media queries
     const sideBetsToggle = document.getElementById('sideBetsToggle');
     const sideBetsList = document.getElementById('sideBetsList');
     if (sideBetsToggle && sideBetsList) {
         sideBetsToggle.addEventListener('click', () => {
-            const isOpen = sideBetsList.style.display !== 'none';
-            sideBetsList.style.display = isOpen ? 'none' : 'block';
+            const isOpen = sideBetsList.classList.contains('open');
+            if (isOpen) {
+                sideBetsList.classList.remove('open');
+            } else {
+                sideBetsList.classList.add('open');
+            }
             const icon = sideBetsToggle.querySelector('.toggle-icon');
             if (icon) {
                 icon.textContent = isOpen ? '▼' : '▲';
@@ -766,7 +761,7 @@ function setupBettingControls(minBet, maxBet) {
             }
 
             updateBetDisplay(betType, bets[betType]);
-            updateTotalBet();
+            updatePlaceBetButton();
 
             // Save to global state for persistence
             gameState.currentBets = { ...bets };
@@ -781,7 +776,7 @@ function setupBettingControls(minBet, maxBet) {
     document.getElementById('clearMainBet')?.addEventListener('click', () => {
         bets.main = 0;
         updateBetDisplay('main', 0);
-        updateTotalBet();
+        updatePlaceBetButton();
         gameState.currentBets = { ...bets };
     });
 
@@ -790,23 +785,34 @@ function setupBettingControls(minBet, maxBet) {
             const betType = btn.dataset.side;
             bets[betType] = 0;
             updateBetDisplay(betType, 0);
-            updateTotalBet();
             gameState.currentBets = { ...bets };
         });
     });
 
-    // Place bet button
-    document.getElementById('placeBetBtn').addEventListener('click', () => {
+    // Sticky action bar buttons - Place bet
+    document.getElementById('placeBetBtnAction')?.addEventListener('click', () => {
         placeBet(bets);
     });
 
-    // Cancel bet button
-    document.getElementById('cancelBetBtn')?.addEventListener('click', () => {
+    // Sticky action bar buttons - Cancel bet
+    document.getElementById('cancelBetBtnAction')?.addEventListener('click', () => {
         cancelBet();
     });
 
-    // Ready checkbox - with debouncing and loading state
-    document.getElementById('readyCheckbox')?.addEventListener('change', (e) => {
+    // Sticky action bar buttons - Sit Out
+    document.getElementById('sitOutBtnAction')?.addEventListener('click', () => {
+        console.log('[App] Sitting out this round');
+        gameState.socket.emit('sit-out', {});
+    });
+
+    // Sticky action bar buttons - Rejoin
+    document.getElementById('rejoinBtnAction')?.addEventListener('click', () => {
+        console.log('[App] Rejoining game');
+        gameState.socket.emit('cancel-sit-out', {});
+    });
+
+    // Ready checkbox in action bar - with debouncing and loading state
+    document.getElementById('readyCheckboxAction')?.addEventListener('change', (e) => {
         const isReady = e.target.checked;
 
         // Prevent double-clicking
@@ -832,12 +838,6 @@ function setupBettingControls(minBet, maxBet) {
         // Disable checkbox during request
         e.target.disabled = true;
 
-        // Add visual loading state
-        const checkboxLabel = e.target.closest('.checkbox-label');
-        if (checkboxLabel) {
-            checkboxLabel.classList.add('loading');
-        }
-
         // Send ready signal
         gameState.socket.emit('ready-bet', { ready: true });
 
@@ -853,35 +853,14 @@ function setupBettingControls(minBet, maxBet) {
                     e.target.checked = false;
                 }
 
-                // Remove loading state
-                if (checkboxLabel) {
-                    checkboxLabel.classList.remove('loading');
-                }
-
                 showNotification('Request timed out. Please try again.', 'error');
             }
         }, 5000);
     });
 
-    // Sit Out button
-    document.getElementById('sitOutBtn')?.addEventListener('click', () => {
-        console.log('[App] Sitting out this round');
-        gameState.socket.emit('sit-out', {});
-    });
-
-    // Rejoin button
-    document.getElementById('rejoinBtn')?.addEventListener('click', () => {
-        console.log('[App] Rejoining game');
-        gameState.socket.emit('cancel-sit-out', {});
-    });
-
-    function updateTotalBet() {
-        const total = bets.main + bets.perfectPairs + bets.bustIt + bets.twentyOnePlus3;
-        const totalEl = document.getElementById('totalBetAmount');
-        if (totalEl) totalEl.textContent = '$' + total;
-
-        // Enable/disable place bet button
-        const placeBetBtn = document.getElementById('placeBetBtn');
+    // Enable/disable place bet button based on minimum bet
+    function updatePlaceBetButton() {
+        const placeBetBtn = document.getElementById('placeBetBtnAction');
         if (placeBetBtn) {
             if (bets.main >= minBet) {
                 placeBetBtn.disabled = false;
@@ -891,8 +870,8 @@ function setupBettingControls(minBet, maxBet) {
         }
     }
 
-    // Initialize total display
-    updateTotalBet();
+    // Initialize place bet button state
+    updatePlaceBetButton();
 }
 
 function placeBet(bets) {
@@ -939,12 +918,18 @@ function placeBet(bets) {
  * @param {Object} player - Current player object from server state
  */
 function syncBettingUIWithServerState(player) {
-    const readyCheckbox = document.getElementById('readyCheckbox');
-    const readyCheckboxContainer = document.getElementById('readyCheckboxContainer');
-    const cancelBetBtn = document.getElementById('cancelBetBtn');
-    const placeBetBtn = document.getElementById('placeBetBtn');
-    const sitOutBtn = document.getElementById('sitOutBtn');
-    const rejoinBtn = document.getElementById('rejoinBtn');
+    const stickyActionBar = document.getElementById('stickyActionBar');
+    const actionBarReady = document.getElementById('actionBarReady');
+    const readyCheckboxAction = document.getElementById('readyCheckboxAction');
+    const cancelBetBtn = document.getElementById('cancelBetBtnAction');
+    const placeBetBtn = document.getElementById('placeBetBtnAction');
+    const sitOutBtn = document.getElementById('sitOutBtnAction');
+    const rejoinBtn = document.getElementById('rejoinBtnAction');
+
+    // Show sticky action bar during betting phase
+    if (stickyActionBar) {
+        stickyActionBar.style.display = 'block';
+    }
 
     // Show sit out or rejoin button based on player state
     if (player.eliminated) {
@@ -963,17 +948,17 @@ function syncBettingUIWithServerState(player) {
         }
     }
 
-    // Sync ready checkbox state
+    // Sync ready checkbox state and action bar buttons
     if (player.currentBet > 0) {
         // Player has placed a bet - show ready controls
-        if (readyCheckboxContainer) {
-            readyCheckboxContainer.style.display = 'block';
+        if (actionBarReady) {
+            actionBarReady.style.display = 'flex';
         }
 
-        if (readyCheckbox) {
-            readyCheckbox.checked = player.ready;
-            // If player is ready, lock the checkbox (final decision)
-            readyCheckbox.disabled = player.ready;
+        // Sync action bar ready checkbox
+        if (readyCheckboxAction) {
+            readyCheckboxAction.checked = player.ready;
+            readyCheckboxAction.disabled = player.ready;
         }
 
         // Sync cancel button
@@ -988,13 +973,13 @@ function syncBettingUIWithServerState(player) {
         }
     } else {
         // No bet placed - hide ready controls
-        if (readyCheckboxContainer) {
-            readyCheckboxContainer.style.display = 'none';
+        if (actionBarReady) {
+            actionBarReady.style.display = 'none';
         }
 
-        if (readyCheckbox) {
-            readyCheckbox.checked = false;
-            readyCheckbox.disabled = true;
+        if (readyCheckboxAction) {
+            readyCheckboxAction.checked = false;
+            readyCheckboxAction.disabled = true;
         }
 
         if (cancelBetBtn) {
@@ -1012,32 +997,8 @@ function cancelBet() {
 
     gameState.socket.emit('cancel-bet', {});
 
-    // Hide and uncheck ready checkbox
-    const readyCheckboxContainer = document.getElementById('readyCheckboxContainer');
-    const readyCheckbox = document.getElementById('readyCheckbox');
-    if (readyCheckboxContainer) {
-        readyCheckboxContainer.style.display = 'none';
-    }
-    if (readyCheckbox) {
-        readyCheckbox.checked = false;
-        readyCheckbox.disabled = true;
-    }
-
     // Clear ready request pending flag
     gameState.readyRequestPending = false;
-
-    // Hide cancel button, show place bet button
-    const placeBetBtn = document.getElementById('placeBetBtn');
-    const cancelBetBtn = document.getElementById('cancelBetBtn');
-
-    if (placeBetBtn) {
-        placeBetBtn.style.display = 'inline-block';
-        placeBetBtn.disabled = false;
-        placeBetBtn.textContent = 'Place Bet';
-    }
-    if (cancelBetBtn) {
-        cancelBetBtn.style.display = 'none';
-    }
 
     // Re-enable all chips
     document.querySelectorAll('.poker-chip, .poker-chip-small').forEach(chip => {
@@ -1137,16 +1098,20 @@ function showPlayerActionControls(state, currentPlayer) {
     const canHit = hand.status === 'active' && handValue < 21;
     const canStand = hand.status === 'active';
     const canDouble = hand.cards.length === 2 && currentPlayer.bankroll >= currentPlayer.currentBet;
+
+    // Check if can split - same rank OR both 10-value cards (10, J, Q, K)
+    const isTenValue = (card) => ['10', 'J', 'Q', 'K'].includes(card.rank);
     const canSplit = hand.cards.length === 2 &&
-                     hand.cards[0].rank === hand.cards[1].rank &&
+                     (hand.cards[0].rank === hand.cards[1].rank ||
+                      (isTenValue(hand.cards[0]) && isTenValue(hand.cards[1]))) &&
                      currentPlayer.bankroll >= currentPlayer.currentBet &&
                      currentPlayer.hands.length < 4;
 
-    // Clear footer controls area
-    controlsArea.innerHTML = '';
+    // Clear floating controls area
+    actionControlsArea.innerHTML = '';
 
-    // Show action controls in floating area near dealer
-    actionControlsArea.innerHTML = `
+    // Show action controls in footer
+    controlsArea.innerHTML = `
         <div class="action-controls-compact">
             <div class="action-info-compact">
                 <span class="action-turn-label">Your Turn</span>

@@ -24,7 +24,8 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     background: var(--bg-primary);
     color: var(--text-light);
-    overflow-x: hidden;
+    overflow: hidden;
+    height: 100vh;
 }
 
 /* ==================== JOIN SCREEN ==================== */
@@ -180,9 +181,11 @@ body {
 /* ==================== GAME UI ==================== */
 
 .game-ui {
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Header */
@@ -231,6 +234,148 @@ body {
     color: var(--bg-dark);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+/* Sticky Action Bar (Betting Phase Only) */
+.sticky-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--bg-dark) 90%, rgba(4, 40, 4, 0.95));
+    border-top: 2px solid var(--accent-gold);
+    box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.5);
+    z-index: 900;
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.action-bar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-sit-out-action,
+.btn-rejoin-action,
+.btn-place-bet-action,
+.btn-cancel-action {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid;
+}
+
+.btn-sit-out-action {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.btn-sit-out-action:hover {
+    background: var(--accent-red);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-rejoin-action {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.btn-rejoin-action:hover {
+    background: #4CAF50;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-place-bet-action {
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+    border-color: var(--accent-gold);
+    color: var(--bg-dark);
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+    font-size: 1rem;
+    padding: 12px 32px;
+}
+
+.btn-place-bet-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.6);
+}
+
+.btn-place-bet-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-cancel-action {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: var(--text-light);
+}
+
+.btn-cancel-action:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-2px);
+}
+
+.btn-cancel-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-bar-ready {
+    display: flex;
+    align-items: center;
+}
+
+.ready-label-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid var(--accent-gold);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ready-label-inline:hover {
+    background: rgba(255, 215, 0, 0.2);
+}
+
+.ready-label-inline input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.ready-label-inline span {
+    color: var(--accent-gold);
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
 .phase-indicator {
@@ -309,7 +454,26 @@ body {
     position: relative;
     background: radial-gradient(ellipse at center, var(--table-felt) 0%, var(--table-green) 100%);
     padding: 40px 20px;
-    min-height: 600px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar for table container */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--accent-gold);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #ffed4e;
 }
 
 /* Game Footer */
@@ -730,6 +894,7 @@ body {
     display: flex;
     gap: 20px;
     align-items: flex-start;
+    padding-bottom: 80px;
 }
 
 .betting-main {
@@ -738,6 +903,8 @@ body {
 
 .betting-side {
     flex: 1;
+    max-height: 400px;
+    overflow: visible;
 }
 
 .betting-actions {
@@ -1036,11 +1203,39 @@ body {
     transition: transform 0.2s ease;
 }
 
-/* Side Bets List */
+/* Side Bets List - hidden by default, toggle with .open class */
 .side-bets-list {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.side-bets-list.open {
+    display: flex;
+}
+
+/* Custom scrollbar styling for side bets */
+.side-bets-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.side-bets-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.side-bets-list::-webkit-scrollbar-thumb {
+    background: var(--accent-gold);
+    border-radius: 3px;
+}
+
+.side-bets-list::-webkit-scrollbar-thumb:hover {
+    background: #ffed4e;
 }
 
 .side-bet-option {
@@ -1291,31 +1486,25 @@ body {
 
 /* ==================== PLAYER ACTION CONTROLS ==================== */
 
-/* Floating action controls near dealer */
-.action-controls-floating {
-    position: absolute;
-    top: 120px;
-    right: 20px;
-    z-index: 100;
-    max-width: 450px;
-}
-
+/* Action controls in footer */
 .action-controls-compact {
     background: rgba(10, 61, 10, 0.95);
     border: 3px solid var(--accent-gold);
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-    animation: slideInRight 0.3s ease-out;
+    max-width: 600px;
+    margin: 0 auto;
+    animation: slideInUp 0.3s ease-out;
 }
 
-@keyframes slideInRight {
+@keyframes slideInUp {
     from {
-        transform: translateX(100%);
+        transform: translateY(50px);
         opacity: 0;
     }
     to {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
     }
 }

@@ -114,6 +114,11 @@ class Dealer {
    * @returns {Boolean}
    */
   shouldHit() {
+    // Don't hit if already complete (busted or reached 17+)
+    if (this.isComplete || this.isBust) {
+      return false;
+    }
+
     const { value, isSoft } = this.getHandValue();
     return GameRules.dealerShouldHit(value, isSoft);
   }

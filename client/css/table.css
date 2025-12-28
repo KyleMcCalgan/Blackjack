@@ -52,8 +52,8 @@
     background: rgba(0, 0, 0, 0.3);
     border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 15px;
-    padding: 15px;
-    min-height: 200px;
+    padding: 12px;
+    min-height: 180px;
     transition: all 0.3s;
 }
 
@@ -116,8 +116,24 @@
 
 .seat-bet-info {
     text-align: center;
-    padding-top: 10px;
+    padding-top: 8px;
     border-top: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.main-bet {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bet-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .bet-amount {
@@ -128,6 +144,44 @@
     border-radius: 12px;
     font-weight: bold;
     font-size: 0.9rem;
+}
+
+/* Side Bets Display */
+.side-bets-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+    align-items: center;
+}
+
+.side-bet-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Perfect Pairs - Purple */
+.side-bet-indicator.pp {
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+    color: white;
+}
+
+/* Bust It - Red */
+.side-bet-indicator.bi {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: white;
+}
+
+/* 21+3 - Blue */
+.side-bet-indicator.tp {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
 }
 
 /* Active/Current Player Highlight */
