@@ -233,21 +233,10 @@
             </div>
         </footer>
 
-        <!-- Sticky Action Bar (betting phase only) -->
-        <div id="stickyActionBar" class="sticky-action-bar" style="display: none;">
-            <div class="action-bar-content">
-                <button class="btn-sit-out-action" id="sitOutBtnAction" style="display: none;">Sit Out</button>
-                <button class="btn-rejoin-action" id="rejoinBtnAction" style="display: none;">Rejoin</button>
-
-                <div class="action-bar-ready" id="actionBarReady" style="display: none;">
-                    <label class="ready-label-inline">
-                        <input type="checkbox" id="readyCheckboxAction" disabled>
-                        <span>Ready</span>
-                    </label>
-                </div>
-
-                <button class="btn-cancel-action" id="cancelBetBtnAction" style="display: none;">Cancel Bet</button>
-                <button class="btn-place-bet-action" id="placeBetBtnAction" style="display: none;">Place Bet</button>
+        <!-- Unified Action Footer (betting and playing phases) -->
+        <div id="unifiedActionFooter" class="unified-action-footer" style="display: none;">
+            <div class="action-footer-content" id="actionFooterContent">
+                <!-- Content will be dynamically populated based on game phase -->
             </div>
         </div>
     </div>

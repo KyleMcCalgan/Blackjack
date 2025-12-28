@@ -87,12 +87,35 @@
         flex-wrap: wrap;
     }
 
-    /* Sticky Action Bar on mobile */
-    .action-bar-content {
+    /* Unified Action Footer on mobile */
+    .action-footer-content {
         padding: 12px 15px;
         gap: 8px;
     }
 
+    .footer-buttons-betting,
+    .footer-buttons-playing {
+        gap: 10px;
+    }
+
+    .btn-footer-action {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+    }
+
+    .btn-footer-action.insufficient-funds {
+        padding: 8px 12px;
+    }
+
+    .btn-footer-action .button-main-text {
+        font-size: 0.9rem;
+    }
+
+    .btn-footer-action .button-sub-text {
+        font-size: 0.65rem;
+    }
+
+    /* Legacy buttons */
     .btn-sit-out-action,
     .btn-rejoin-action,
     .btn-cancel-action {
@@ -210,28 +233,64 @@
         transition: opacity 0.3s ease, transform 0.3s ease;
     }
 
-    /* Hide table during betting phase - show only betting interface */
-    body:has(#stickyActionBar[style*="display: block"]) .table-container {
+    /* Data attribute to control mobile full-screen modes */
+    /* When in betting phase, hide table and show full-screen betting interface */
+    body[data-mobile-phase="betting"] .table-container {
         display: none !important;
     }
 
-    /* Hide footer during non-betting phases - show only table/action controls */
-    body:has(#stickyActionBar[style*="display: none"]) .game-footer,
-    body:has(#stickyActionBar[style*="display: none"]) .sticky-action-bar {
+    /* When in playing phase, hide betting footer content and show table */
+    body[data-mobile-phase="playing"] .game-footer {
         display: none !important;
     }
 
     /* Make footer take full screen during betting */
-    body:has(#stickyActionBar[style*="display: block"]) .game-footer {
-        position: fixed;
-        top: 80px; /* Below header */
-        left: 0;
-        right: 0;
-        bottom: 0;
-        overflow-y: auto;
-        padding: 20px;
+    body[data-mobile-phase="betting"] .game-footer {
+        position: static;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        overflow-y: visible;
+        padding: 15px 10px 10px 10px;
         background: var(--bg-primary);
         animation: fadeIn 0.3s ease;
+        display: block !important;
+        height: auto;
+        min-height: auto;
+    }
+
+    /* Container to hold betting content and push footer to bottom */
+    body[data-mobile-phase="betting"] {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    body[data-mobile-phase="betting"] .game-ui {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    body[data-mobile-phase="betting"] .game-header {
+        flex-shrink: 0;
+    }
+
+    body[data-mobile-phase="betting"] .table-container {
+        flex: 0 0 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    body[data-mobile-phase="betting"] .game-footer {
+        flex: 0 0 auto;
+        overflow-y: auto;
+        max-height: calc(100vh - 80px - 70px);
+    }
+
+    body[data-mobile-phase="betting"] .unified-action-footer {
+        flex-shrink: 0;
+        margin-top: auto;
     }
 
     @keyframes fadeIn {
@@ -245,28 +304,30 @@
         }
     }
 
-    /* Adjust sticky action bar position when footer is full screen */
-    body:has(#stickyActionBar[style*="display: block"]) .sticky-action-bar {
+    /* Unified action footer positioning */
+    body[data-mobile-phase="betting"] .unified-action-footer,
+    body[data-mobile-phase="playing"] .unified-action-footer {
         position: fixed;
         bottom: 0;
     }
 
-    /* During playing phase - make table full screen */
-    body:not(:has(#stickyActionBar[style*="display: block"])) .table-container {
-        padding-bottom: 20px !important;
-        height: calc(100vh - 80px); /* Full height minus header */
+    /* During playing phase - make table full screen with footer at bottom */
+    body[data-mobile-phase="playing"] .table-container {
+        padding-bottom: 80px !important;
+        min-height: calc(100vh - 160px); /* Full height minus header and footer */
         animation: fadeIn 0.3s ease;
     }
 
     /* Hide table-related elements when in full screen betting mode */
-    body:has(#stickyActionBar[style*="display: block"]) #lobbySettings,
-    body:has(#stickyActionBar[style*="display: block"]) .table-message,
-    body:has(#stickyActionBar[style*="display: block"]) .table-center {
+    body[data-mobile-phase="betting"] #lobbySettings,
+    body[data-mobile-phase="betting"] .table-message,
+    body[data-mobile-phase="betting"] .table-center {
         display: none !important;
     }
 
     /* Optimize header during full screen modes */
-    body:has(#stickyActionBar[style*="display: block"]) .game-header {
+    body[data-mobile-phase="betting"] .game-header,
+    body[data-mobile-phase="playing"] .game-header {
         position: sticky;
         top: 0;
         z-index: 999;
@@ -274,8 +335,8 @@
     }
 
     /* Make betting chips larger and more touch-friendly in full screen mode */
-    body:has(#stickyActionBar[style*="display: block"]) .poker-chip,
-    body:has(#stickyActionBar[style*="display: block"]) .poker-chip-small {
+    body[data-mobile-phase="betting"] .poker-chip,
+    body[data-mobile-phase="betting"] .poker-chip-small {
         min-width: 65px !important;
         max-width: 65px !important;
         height: 65px !important;
@@ -435,19 +496,20 @@
     /* Betting interface - stack vertically */
     .betting-container {
         flex-direction: column;
-        gap: 15px;
-        padding-bottom: 20px;
+        gap: 12px;
+        padding-bottom: 0;
     }
 
     /* Full screen betting on mobile */
-    body:has(#stickyActionBar[style*="display: block"]) .betting-container {
+    body[data-mobile-phase="betting"] .betting-container {
         padding-top: 10px;
-        padding-bottom: 80px; /* Space for sticky action bar at bottom */
+        padding-bottom: 10px;
         max-width: 100%;
+        margin-bottom: 0;
     }
 
     /* Add helpful title to betting section in full screen mode */
-    body:has(#stickyActionBar[style*="display: block"]) .betting-container::before {
+    body[data-mobile-phase="betting"] .betting-container::before {
         content: "Place Your Bets";
         display: block;
         text-align: center;
@@ -461,17 +523,25 @@
 
     .betting-main {
         width: 100%;
+        margin-bottom: 0;
     }
 
     .betting-side {
         width: 100%;
+        margin-bottom: 0;
+    }
+
+    /* Tighter spacing for bet sections on mobile */
+    .bet-section {
+        margin-bottom: 8px;
     }
 
     /* Collapsible side bets on mobile - collapsed by default */
     .betting-side {
         background: rgba(0, 0, 0, 0.2);
         border-radius: 12px;
-        padding: 10px;
+        padding: 8px;
+        margin-top: 8px;
     }
 
     /* Side bets collapsed by default on mobile - use class for toggleability */
@@ -513,6 +583,7 @@
         justify-content: center;
         flex-wrap: wrap;
         gap: 6px;
+        margin: 8px 0;
     }
 
     .poker-chip,
@@ -521,6 +592,11 @@
         max-width: 55px;
         height: 55px;
         font-size: 0.8rem;
+    }
+
+    .poker-chips {
+        gap: 6px;
+        margin: 8px 0;
     }
 
     .chip-value {
@@ -584,13 +660,22 @@
 
     /* Bet total - more compact */
     .bet-total {
-        padding: 10px 20px;
-        font-size: 1rem;
-        margin-bottom: 8px;
+        padding: 8px 16px;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+        margin-top: 4px;
     }
 
     #totalBetAmount {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
+    }
+
+    .bet-display-area {
+        margin: 8px 0;
+    }
+
+    .bet-value-large {
+        margin: 4px 0;
     }
 
     /* Insurance controls */
@@ -614,6 +699,19 @@
         min-width: 120px;
         padding: 12px 20px;
         font-size: 1rem;
+    }
+
+    /* Insufficient funds on smallest screens */
+    .btn-footer-action.insufficient-funds {
+        padding: 6px 8px;
+    }
+
+    .btn-footer-action.insufficient-funds .button-main-text {
+        font-size: 0.85rem;
+    }
+
+    .btn-footer-action.insufficient-funds .button-sub-text {
+        font-size: 0.6rem;
     }
 
     /* Notifications */

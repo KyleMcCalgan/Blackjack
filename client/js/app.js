@@ -176,10 +176,13 @@ function setupJoinForm() {
 
 function handleJoinSuccess(data) {
     console.log('[App] Join successful:', data);
+    console.log('[App] Setting isHost to:', data.player.isHost);
 
     gameState.playerName = data.player.name;
     gameState.playerSeat = data.seat;
     gameState.isHost = data.player.isHost;
+
+    console.log('[App] gameState.isHost is now:', gameState.isHost);
 
     // Hide join screen, show game UI
     document.getElementById('joinScreen').style.display = 'none';
@@ -197,6 +200,31 @@ function handleJoinSuccess(data) {
     }
 
     console.log('[App] Joined as', data.player.name, 'in seat', data.seat);
+
+    // Manually trigger controls update now that we know our host status
+    // This ensures the start button appears for the host immediately
+    console.log('[App] Current phase:', gameState.phase, 'isHost:', gameState.isHost);
+
+    if ((gameState.phase === 'lobby' || !gameState.phase) && gameState.isHost) {
+        console.log('[App] Host joined - showing start button');
+        const controlsArea = document.getElementById('controlsArea');
+        const actionControlsArea = document.getElementById('actionControlsArea');
+
+        if (actionControlsArea) actionControlsArea.innerHTML = '';
+
+        if (controlsArea) {
+            controlsArea.innerHTML = `
+                <button class="btn-game-action btn-start" id="startGameBtn">
+                    Start Game
+                </button>
+            `;
+
+            document.getElementById('startGameBtn').addEventListener('click', () => {
+                console.log('[App] Starting game...');
+                gameState.socket.emit('start-game');
+            });
+        }
+    }
 }
 
 function handleJoinFailed(data) {
@@ -253,15 +281,17 @@ function handleGameState(state) {
     if (currentPlayer) {
         document.getElementById('playerBankroll').textContent = '$' + currentPlayer.bankroll;
 
-        // Sync ready checkbox and cancel button state with server state
+        // Update unified action footer based on phase
         if (state.phase === 'betting') {
-            syncBettingUIWithServerState(currentPlayer);
-        } else {
-            // Hide sticky action bar when not in betting phase
-            const stickyActionBar = document.getElementById('stickyActionBar');
-            if (stickyActionBar) {
-                stickyActionBar.style.display = 'none';
+            syncBettingUIWithServerState(currentPlayer, state.config);
+        } else if (state.phase === 'playing') {
+            // Footer will be populated by showPlayerActionControls if it's player's turn
+            // Otherwise hide it
+            if (state.currentPlayer !== gameState.playerId) {
+                renderUnifiedActionFooter('other', currentPlayer, state.config);
             }
+        } else {
+            renderUnifiedActionFooter('other', currentPlayer, state.config);
         }
     }
 }
@@ -332,6 +362,14 @@ function handleReadyConfirmed(data) {
     // Clear pending flag
     gameState.readyRequestPending = false;
 
+    // Update new footer button
+    const readyBtn = document.getElementById('readyBtnFooter');
+    if (readyBtn) {
+        readyBtn.disabled = true;
+        readyBtn.textContent = '✓ Ready';
+    }
+
+    // Legacy support for old elements
     const readyCheckboxAction = document.getElementById('readyCheckboxAction');
     const cancelBetBtn = document.getElementById('cancelBetBtnAction');
 
@@ -359,6 +397,14 @@ function handleReadyFailed(data) {
     // Clear pending flag
     gameState.readyRequestPending = false;
 
+    // Update new footer button
+    const readyBtn = document.getElementById('readyBtnFooter');
+    if (readyBtn) {
+        readyBtn.disabled = false;
+        readyBtn.textContent = 'Ready';
+    }
+
+    // Legacy support for old elements
     const readyCheckboxAction = document.getElementById('readyCheckboxAction');
 
     // Uncheck checkbox and keep it enabled
@@ -546,9 +592,13 @@ function updateControlsArea(state) {
     const actionControlsArea = document.getElementById('actionControlsArea');
     const currentPlayer = state.players.find(p => p.id === gameState.playerId);
 
+    console.log('[App] updateControlsArea - phase:', state.phase, 'isHost:', gameState.isHost, 'playerId:', gameState.playerId);
+
     if (state.phase === 'lobby' && gameState.isHost) {
         // Clear action controls
         if (actionControlsArea) actionControlsArea.innerHTML = '';
+
+        console.log('[App] Showing start game button');
 
         // Show start game button for host
         controlsArea.innerHTML = `
@@ -701,6 +751,18 @@ function showBettingInterface(state) {
     setupBettingControls(minBet, maxBet);
 }
 
+// Helper function to update the footer Place Bet button
+function updateFooterPlaceBetButton(mainBet, minBet) {
+    const placeBetBtnFooter = document.getElementById('placeBetBtnFooter');
+    if (placeBetBtnFooter) {
+        if (mainBet >= minBet) {
+            placeBetBtnFooter.disabled = false;
+        } else {
+            placeBetBtnFooter.disabled = true;
+        }
+    }
+}
+
 function setupBettingControls(minBet, maxBet) {
     // Track bet amounts - restore from saved state if available
     const bets = gameState.currentBets || {
@@ -715,6 +777,9 @@ function setupBettingControls(minBet, maxBet) {
     updateBetDisplay('perfectPairs', bets.perfectPairs);
     updateBetDisplay('bustIt', bets.bustIt);
     updateBetDisplay('twentyOnePlus3', bets.twentyOnePlus3);
+
+    // Initialize footer button state
+    updateFooterPlaceBetButton(bets.main, minBet);
 
     // Update displays helper function (defined before use)
     function updateBetDisplay(betType, amount) {
@@ -762,6 +827,7 @@ function setupBettingControls(minBet, maxBet) {
 
             updateBetDisplay(betType, bets[betType]);
             updatePlaceBetButton();
+            updateFooterPlaceBetButton(bets.main, minBet);
 
             // Save to global state for persistence
             gameState.currentBets = { ...bets };
@@ -777,6 +843,7 @@ function setupBettingControls(minBet, maxBet) {
         bets.main = 0;
         updateBetDisplay('main', 0);
         updatePlaceBetButton();
+        updateFooterPlaceBetButton(0, minBet);
         gameState.currentBets = { ...bets };
     });
 
@@ -913,83 +980,185 @@ function placeBet(bets) {
 }
 
 /**
- * Sync betting UI elements with server game state
- * Ensures ready checkbox and cancel button match server truth
- * @param {Object} player - Current player object from server state
+ * Render the unified action footer based on game phase
+ * @param {String} phase - Current game phase
+ * @param {Object} player - Current player object
+ * @param {Object} config - Game configuration (optional, for betting phase)
  */
-function syncBettingUIWithServerState(player) {
-    const stickyActionBar = document.getElementById('stickyActionBar');
-    const actionBarReady = document.getElementById('actionBarReady');
-    const readyCheckboxAction = document.getElementById('readyCheckboxAction');
-    const cancelBetBtn = document.getElementById('cancelBetBtnAction');
-    const placeBetBtn = document.getElementById('placeBetBtnAction');
-    const sitOutBtn = document.getElementById('sitOutBtnAction');
-    const rejoinBtn = document.getElementById('rejoinBtnAction');
+function renderUnifiedActionFooter(phase, player, config) {
+    const footer = document.getElementById('unifiedActionFooter');
+    const content = document.getElementById('actionFooterContent');
 
-    // Show sticky action bar during betting phase
-    if (stickyActionBar) {
-        stickyActionBar.style.display = 'block';
-    }
+    if (!footer || !content) return;
 
-    // Show sit out or rejoin button based on player state
-    if (player.eliminated) {
-        // Player is sitting out - show rejoin button
-        if (sitOutBtn) sitOutBtn.style.display = 'none';
-        if (rejoinBtn) rejoinBtn.style.display = 'inline-block';
-    } else {
-        // Player is active - show sit out button (if no bet placed)
-        if (player.currentBet === 0) {
-            if (sitOutBtn) sitOutBtn.style.display = 'inline-block';
-            if (rejoinBtn) rejoinBtn.style.display = 'none';
+    // Set mobile phase data attribute for CSS targeting
+    if (window.innerWidth <= 480) {
+        if (phase === 'betting') {
+            document.body.setAttribute('data-mobile-phase', 'betting');
+        } else if (phase === 'playing' || phase === 'dealer' || phase === 'insurance') {
+            // All game-in-progress phases should show the table
+            document.body.setAttribute('data-mobile-phase', 'playing');
         } else {
-            // Has bet - hide both buttons
-            if (sitOutBtn) sitOutBtn.style.display = 'none';
-            if (rejoinBtn) rejoinBtn.style.display = 'none';
+            document.body.removeAttribute('data-mobile-phase');
         }
     }
 
-    // Sync ready checkbox state and action bar buttons
-    if (player.currentBet > 0) {
-        // Player has placed a bet - show ready controls
-        if (actionBarReady) {
-            actionBarReady.style.display = 'flex';
+    if (phase === 'betting' && player) {
+        // Betting phase: Show appropriate buttons based on player state
+        footer.style.display = 'block';
+
+        const hasBet = player.currentBet > 0;
+        const isReady = player.ready;
+        const isEliminated = player.eliminated;
+
+        // Check if minimum bet is met (for Place Bet button)
+        const currentBets = gameState.currentBets || { main: 0 };
+        const minBet = config?.minBet || 10;
+        const canPlaceBet = currentBets.main >= minBet;
+
+        // Determine which buttons to show
+        // Left button: Sit Out (no bet) or Rejoin (eliminated) or empty
+        // Right button: Place Bet (no bet) or Ready (has bet)
+
+        content.innerHTML = `
+            <div class="footer-buttons-betting">
+                ${isEliminated ? `
+                    <button class="btn-footer-action btn-footer-rejoin" id="rejoinBtnFooter">
+                        Rejoin
+                    </button>
+                ` : !hasBet ? `
+                    <button class="btn-footer-action btn-footer-sitout" id="sitOutBtnFooter">
+                        Sit Out
+                    </button>
+                ` : '<div></div>'}
+
+                ${!hasBet ? `
+                    <button class="btn-footer-action btn-footer-ready" id="placeBetBtnFooter" ${!canPlaceBet ? 'disabled' : ''}>
+                        Place Bet
+                    </button>
+                ` : `
+                    <button class="btn-footer-action btn-footer-ready" id="readyBtnFooter" ${isReady ? 'disabled' : ''}>
+                        ${isReady ? '✓ Ready' : 'Ready'}
+                    </button>
+                `}
+            </div>
+        `;
+
+        // Attach event listeners
+        const sitOutBtn = document.getElementById('sitOutBtnFooter');
+        const rejoinBtn = document.getElementById('rejoinBtnFooter');
+        const placeBetBtn = document.getElementById('placeBetBtnFooter');
+        const readyBtn = document.getElementById('readyBtnFooter');
+
+        if (sitOutBtn) {
+            sitOutBtn.addEventListener('click', handleSitOut);
         }
 
-        // Sync action bar ready checkbox
-        if (readyCheckboxAction) {
-            readyCheckboxAction.checked = player.ready;
-            readyCheckboxAction.disabled = player.ready;
-        }
-
-        // Sync cancel button
-        if (cancelBetBtn) {
-            cancelBetBtn.style.display = 'inline-block';
-            cancelBetBtn.disabled = player.ready; // Can't cancel if ready
-            cancelBetBtn.style.opacity = player.ready ? '0.5' : '1';
+        if (rejoinBtn) {
+            rejoinBtn.addEventListener('click', handleRejoin);
         }
 
         if (placeBetBtn) {
-            placeBetBtn.style.display = 'none';
+            placeBetBtn.addEventListener('click', () => {
+                // Get current bets from global state or calculate from UI
+                const bets = gameState.currentBets || {
+                    main: 0,
+                    perfectPairs: 0,
+                    bustIt: 0,
+                    twentyOnePlus3: 0
+                };
+                placeBet(bets);
+            });
         }
+
+        if (readyBtn) {
+            readyBtn.addEventListener('click', handleReadyClick);
+        }
+
+    } else if (phase === 'playing') {
+        // Playing phase: Will be populated by showPlayerActionControls
+        footer.style.display = 'block';
+        // Content will be set by showPlayerActionControls
+    } else if (phase === 'dealer' || phase === 'insurance') {
+        // During dealer's turn or insurance phase, hide footer but keep mobile layout
+        footer.style.display = 'none';
+        content.innerHTML = '';
+        // Mobile phase already set above for table display
     } else {
-        // No bet placed - hide ready controls
-        if (actionBarReady) {
-            actionBarReady.style.display = 'none';
-        }
-
-        if (readyCheckboxAction) {
-            readyCheckboxAction.checked = false;
-            readyCheckboxAction.disabled = true;
-        }
-
-        if (cancelBetBtn) {
-            cancelBetBtn.style.display = 'none';
-        }
-
-        if (placeBetBtn) {
-            placeBetBtn.style.display = 'inline-block';
+        // Lobby, results, or other phases
+        footer.style.display = 'none';
+        content.innerHTML = '';
+        if (window.innerWidth <= 480) {
+            document.body.removeAttribute('data-mobile-phase');
         }
     }
+}
+
+/**
+ * Handler for Sit Out button
+ */
+function handleSitOut() {
+    console.log('[App] Sitting out this round');
+    gameState.socket.emit('sit-out', {});
+}
+
+/**
+ * Handler for Rejoin button
+ */
+function handleRejoin() {
+    console.log('[App] Rejoining game');
+    gameState.socket.emit('cancel-sit-out', {});
+}
+
+/**
+ * Handler for Ready button
+ */
+function handleReadyClick() {
+    // Prevent double-clicking
+    if (gameState.readyRequestPending) {
+        console.log('[App] Ready request already pending');
+        return;
+    }
+
+    console.log('[App] Sending ready signal to server...');
+    gameState.readyRequestPending = true;
+
+    // Disable button while processing
+    const readyBtn = document.getElementById('readyBtnFooter');
+    if (readyBtn) {
+        readyBtn.disabled = true;
+        readyBtn.textContent = 'Processing...';
+    }
+
+    // Send ready signal - same event as the old checkbox system
+    gameState.socket.emit('ready-bet', { ready: true });
+
+    // Timeout after 5 seconds if no response
+    setTimeout(() => {
+        if (gameState.readyRequestPending) {
+            console.log('[App] Ready request timed out');
+            gameState.readyRequestPending = false;
+
+            // Re-enable button and reset text
+            if (readyBtn) {
+                readyBtn.disabled = false;
+                readyBtn.textContent = 'Ready';
+            }
+
+            showNotification('Request timed out. Please try again.', 'error');
+        }
+    }, 5000);
+}
+
+/**
+ * Sync betting UI elements with server game state
+ * Ensures footer buttons match server truth
+ * @param {Object} player - Current player object from server state
+ * @param {Object} config - Game configuration
+ */
+function syncBettingUIWithServerState(player, config) {
+    // Render the unified action footer for betting phase
+    renderUnifiedActionFooter('betting', player, config);
 }
 
 function cancelBet() {
@@ -1070,13 +1239,16 @@ function showInsuranceControls(state) {
 function showPlayerActionControls(state, currentPlayer) {
     const actionControlsArea = document.getElementById('actionControlsArea');
     const controlsArea = document.getElementById('controlsArea');
+    const footer = document.getElementById('unifiedActionFooter');
+    const content = document.getElementById('actionFooterContent');
 
     // Check if it's this player's turn
     const isMyTurn = state.currentPlayer === gameState.playerId;
 
     if (!isMyTurn) {
-        actionControlsArea.innerHTML = '';
-        controlsArea.innerHTML = '';
+        if (actionControlsArea) actionControlsArea.innerHTML = '';
+        if (controlsArea) controlsArea.innerHTML = '';
+        renderUnifiedActionFooter('other', currentPlayer);
         return;
     }
 
@@ -1085,8 +1257,9 @@ function showPlayerActionControls(state, currentPlayer) {
     const hand = currentPlayer.hands?.[handIndex];
 
     if (!hand) {
-        actionControlsArea.innerHTML = '';
-        controlsArea.innerHTML = '';
+        if (actionControlsArea) actionControlsArea.innerHTML = '';
+        if (controlsArea) controlsArea.innerHTML = '';
+        renderUnifiedActionFooter('other', currentPlayer);
         return;
     }
 
@@ -1097,7 +1270,29 @@ function showPlayerActionControls(state, currentPlayer) {
 
     const canHit = hand.status === 'active' && handValue < 21;
     const canStand = hand.status === 'active';
-    const canDouble = hand.cards.length === 2 && currentPlayer.bankroll >= currentPlayer.currentBet;
+
+    // Can double if: exactly 2 cards, hand is active, and player has enough bankroll
+    // The bet amount to match is the hand's bet (or current bet for first hand)
+    const betToMatch = hand.bet || currentPlayer.currentBet;
+    const canDouble = hand.cards && hand.cards.length === 2 &&
+                      hand.status === 'active' &&
+                      currentPlayer.bankroll >= betToMatch;
+
+    // Check reasons for disabled double
+    const doubleInsufficientFunds = hand.cards && hand.cards.length === 2 &&
+                                    hand.status === 'active' &&
+                                    currentPlayer.bankroll < betToMatch;
+
+    // Debug logging for double button
+    console.log('[App] Double button check:', {
+        handCards: hand.cards?.length,
+        handStatus: hand.status,
+        betToMatch,
+        playerBankroll: currentPlayer.bankroll,
+        canDouble,
+        doubleInsufficientFunds,
+        handValue
+    });
 
     // Check if can split - same rank OR both 10-value cards (10, J, Q, K)
     const isTenValue = (card) => ['10', 'J', 'Q', 'K'].includes(card.rank);
@@ -1107,56 +1302,68 @@ function showPlayerActionControls(state, currentPlayer) {
                      currentPlayer.bankroll >= currentPlayer.currentBet &&
                      currentPlayer.hands.length < 4;
 
-    // Clear floating controls area
-    actionControlsArea.innerHTML = '';
+    // Check reasons for disabled split
+    const splitInsufficientFunds = hand.cards.length === 2 &&
+                                   (hand.cards[0].rank === hand.cards[1].rank ||
+                                    (isTenValue(hand.cards[0]) && isTenValue(hand.cards[1]))) &&
+                                   currentPlayer.bankroll < currentPlayer.currentBet &&
+                                   currentPlayer.hands.length < 4;
 
-    // Show action controls in footer
-    controlsArea.innerHTML = `
-        <div class="action-controls-compact">
-            <div class="action-info-compact">
-                <span class="action-turn-label">Your Turn</span>
-                ${currentPlayer.hands.length > 1 ? `<span class="action-hand-indicator">Hand ${handIndex + 1}/${currentPlayer.hands.length}</span>` : ''}
-            </div>
-            <div class="action-buttons-row">
-                <button class="btn-action btn-hit" id="hitBtn" ${!canHit ? 'disabled' : ''}>
+    // Clear old controls areas
+    if (actionControlsArea) actionControlsArea.innerHTML = '';
+    if (controlsArea) controlsArea.innerHTML = '';
+
+    // Set mobile phase for playing
+    if (window.innerWidth <= 480) {
+        document.body.setAttribute('data-mobile-phase', 'playing');
+    }
+
+    // Show action controls in unified footer
+    if (footer && content) {
+        footer.style.display = 'block';
+        content.innerHTML = `
+            <div class="footer-buttons-playing">
+                <button class="btn-footer-action btn-footer-hit" id="hitBtn" ${!canHit ? 'disabled' : ''}>
                     Hit
                 </button>
-                <button class="btn-action btn-stand" id="standBtn" ${!canStand ? 'disabled' : ''}>
+                <button class="btn-footer-action btn-footer-stand" id="standBtn" ${!canStand ? 'disabled' : ''}>
                     Stand
                 </button>
-                <button class="btn-action btn-double" id="doubleBtn" ${!canDouble ? 'disabled' : ''}>
-                    Double
+                <button class="btn-footer-action btn-footer-double ${doubleInsufficientFunds ? 'insufficient-funds' : ''}" id="doubleBtn" ${!canDouble ? 'disabled' : ''}>
+                    <span class="button-main-text">Double</span>
+                    ${doubleInsufficientFunds ? '<span class="button-sub-text">Insufficient Funds</span>' : ''}
                 </button>
-                <button class="btn-action btn-split" id="splitBtn" ${!canSplit ? 'disabled' : ''}>
-                    Split
+                <button class="btn-footer-action btn-footer-split ${splitInsufficientFunds ? 'insufficient-funds' : ''}" id="splitBtn" ${!canSplit ? 'disabled' : ''}>
+                    <span class="button-main-text">Split</span>
+                    ${splitInsufficientFunds ? '<span class="button-sub-text">Insufficient Funds</span>' : ''}
                 </button>
             </div>
-        </div>
-    `;
+        `;
 
-    // Add event listeners
-    if (canHit) {
-        document.getElementById('hitBtn').addEventListener('click', () => {
-            performAction('hit', handIndex);
-        });
-    }
+        // Add event listeners - only for enabled buttons
+        if (canHit) {
+            document.getElementById('hitBtn').addEventListener('click', () => {
+                performAction('hit', handIndex);
+            });
+        }
 
-    if (canStand) {
-        document.getElementById('standBtn').addEventListener('click', () => {
-            performAction('stand', handIndex);
-        });
-    }
+        if (canStand) {
+            document.getElementById('standBtn').addEventListener('click', () => {
+                performAction('stand', handIndex);
+            });
+        }
 
-    if (canDouble) {
-        document.getElementById('doubleBtn').addEventListener('click', () => {
-            performAction('double', handIndex);
-        });
-    }
+        if (canDouble) {
+            document.getElementById('doubleBtn').addEventListener('click', () => {
+                performAction('double', handIndex);
+            });
+        }
 
-    if (canSplit) {
-        document.getElementById('splitBtn').addEventListener('click', () => {
-            performAction('split', handIndex);
-        });
+        if (canSplit) {
+            document.getElementById('splitBtn').addEventListener('click', () => {
+                performAction('split', handIndex);
+            });
+        }
     }
 }
 
@@ -1166,7 +1373,7 @@ function performAction(action, handIndex) {
     gameState.socket.emit('player-action', { action, handIndex });
 
     // Disable all action buttons while processing
-    document.querySelectorAll('.btn-action').forEach(btn => {
+    document.querySelectorAll('.btn-action, .btn-footer-action').forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = '0.5';
     });

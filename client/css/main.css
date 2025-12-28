@@ -236,8 +236,8 @@ body {
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
-/* Sticky Action Bar (Betting Phase Only) */
-.sticky-action-bar {
+/* Unified Action Footer (Betting and Playing Phases) */
+.unified-action-footer {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -260,7 +260,7 @@ body {
     }
 }
 
-.action-bar-content {
+.action-footer-content {
     max-width: 1200px;
     margin: 0 auto;
     padding: 10px 20px;
@@ -271,6 +271,144 @@ body {
     flex-wrap: wrap;
 }
 
+/* Footer button grid layouts */
+.footer-buttons-betting {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
+
+.footer-buttons-playing {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Footer action buttons - unified style for betting and playing phases */
+.btn-footer-action {
+    padding: 14px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid;
+    background: var(--bg-secondary);
+}
+
+.btn-footer-ready {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    border-color: #4CAF50;
+    color: white;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-footer-ready:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+}
+
+.btn-footer-sitout {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.btn-footer-sitout:hover:not(:disabled) {
+    background: var(--accent-red);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-footer-rejoin {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.btn-footer-rejoin:hover:not(:disabled) {
+    background: #4CAF50;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Action buttons in footer (Hit, Stand, Double, Split) */
+.btn-footer-hit {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    border-color: #2196F3;
+    color: white;
+}
+
+.btn-footer-hit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.5);
+}
+
+.btn-footer-stand {
+    background: linear-gradient(135deg, var(--accent-red) 0%, #c82333 100%);
+    border-color: var(--accent-red);
+    color: white;
+}
+
+.btn-footer-stand:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+}
+
+.btn-footer-double {
+    background: linear-gradient(135deg, var(--accent-gold) 0%, #ffed4e 100%);
+    border-color: var(--accent-gold);
+    color: var(--bg-dark);
+}
+
+.btn-footer-double:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
+}
+
+.btn-footer-split {
+    background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+    border-color: #9C27B0;
+    color: white;
+}
+
+.btn-footer-split:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(156, 39, 176, 0.5);
+}
+
+.btn-footer-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(50%);
+}
+
+/* Insufficient funds styling */
+.btn-footer-action.insufficient-funds {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 16px;
+}
+
+.btn-footer-action .button-main-text {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.btn-footer-action .button-sub-text {
+    font-size: 0.7rem;
+    opacity: 0.9;
+    font-weight: 500;
+    line-height: 1;
+}
+
+/* Legacy button styles for backwards compatibility */
 .btn-sit-out-action,
 .btn-rejoin-action,
 .btn-place-bet-action,
@@ -905,6 +1043,47 @@ body {
     flex: 1;
     max-height: 400px;
     overflow: visible;
+}
+
+/* Collapsible sidebets toggle */
+.side-bets-toggle {
+    width: 100%;
+    padding: 12px 18px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid var(--accent-gold);
+    border-radius: 8px;
+    color: var(--accent-gold);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s;
+    margin-bottom: 10px;
+}
+
+.side-bets-toggle:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.side-bets-toggle .toggle-icon {
+    transition: transform 0.3s;
+    font-size: 1.2rem;
+}
+
+.side-bets-toggle.open .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.side-bets-list {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.side-bets-list.open {
+    display: block;
 }
 
 .betting-actions {

@@ -301,9 +301,13 @@ server.listen(PORT, async () => {
 
   try {
     // Connect to ngrok
+    // To use ngrok:
+    // 1. Sign up at https://ngrok.com
+    // 2. Get your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
+    // 3. Replace 'YOUR_NGROK_AUTHTOKEN_HERE' below with your actual token
     const listener = await ngrok.connect({
       addr: PORT,
-      authtoken_from_env: false
+      authtoken: '37SxIKpwVkYxD17QVxhPHXZpVsk_32o2jDPScU6bdS2upMFEb'  // Replace this with your actual ngrok authtoken
     });
 
     const publicUrl = listener.url();

@@ -366,13 +366,16 @@ class GameRoom {
   }
 
   /**
-   * Check if all players have made a decision (ready or eliminated)
+   * Check if all players have made a decision (bet placed, ready, or eliminated)
    * @returns {Boolean}
    */
   allPlayersReady() {
     for (const player of this.players.values()) {
-      // Player must be either ready (has bet) or eliminated (sat out/no money)
-      if (!player.eliminated && !player.ready) {
+      // Player must be either:
+      // 1. Has placed a bet (currentBet > 0) - ready is optional
+      // 2. Ready (explicitly confirmed)
+      // 3. Eliminated (sat out/no money)
+      if (!player.eliminated && !player.ready && player.currentBet === 0) {
         return false;
       }
     }
@@ -485,9 +488,10 @@ class GameRoom {
 
     console.log('[GameRoom] Betting phase ended');
 
-    // Auto-fold players who didn't bet
+    // Auto-fold players who didn't bet (even if they didn't ready up)
+    // If a player placed a bet, they play regardless of ready status
     for (const player of this.players.values()) {
-      if (!player.ready || player.currentBet === 0) {
+      if (player.currentBet === 0) {
         console.log(`[GameRoom] ${player.name} auto-folded (no bet)`);
         player.eliminated = true;
         player.clearHands(); // Ensure hands are cleared for eliminated players
