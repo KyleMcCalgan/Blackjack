@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -321,13 +322,15 @@ server.listen(PORT, async () => {
 
   try {
     // Connect to ngrok
-    // To use ngrok:
-    // 1. Sign up at https://ngrok.com
-    // 2. Get your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
-    // 3. Replace 'YOUR_NGROK_AUTHTOKEN_HERE' below with your actual token
+    const authtoken = process.env.NGROK_AUTHTOKEN;
+
+    if (!authtoken) {
+      throw new Error('NGROK_AUTHTOKEN not found in .env file. Please add your ngrok authtoken to .env');
+    }
+
     const listener = await ngrok.connect({
       addr: PORT,
-      authtoken: '37SxIKpwVkYxD17QVxhPHXZpVsk_32o2jDPScU6bdS2upMFEb'  // Replace this with your actual ngrok authtoken
+      authtoken: authtoken
     });
 
     const publicUrl = listener.url();
