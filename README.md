@@ -1,4 +1,4 @@
-# Multiplayer Blackjack Web Game 🎰
+# Multiplayer Blackjack Web Game
 
 A real-time multiplayer blackjack game built with Node.js and Socket.IO. Host games from your laptop and let friends join from any device.
 
@@ -182,12 +182,8 @@ If you have a VPS with a public IP:
 4. Access directly via your server's IP (no ngrok needed)
 5. Consider using PM2 for process management: `npm install -g pm2 && pm2 start server/index.js`
 
-## Development Status
-
-🚧 **In Development** - This is a learning project
-
-See [Context.md](blackjack-game-spec.md) for complete project specification and roadmap.
 
 ## Contributing
 
 This is a personal learning project, but feel free to fork and experiment!
+Big shout out to Claude for all of the assists!
