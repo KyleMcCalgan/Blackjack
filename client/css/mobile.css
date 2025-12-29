@@ -352,14 +352,81 @@
         font-size: 2rem;
     }
 
+    /* Floating cards - smaller on mobile */
+    .floating-card {
+        width: 45px;
+        height: 64px;
+        font-size: 1.5rem;
+        opacity: 0.4;
+    }
+
     .join-form input,
     .join-form button {
         padding: 12px;
         font-size: 0.95rem;
     }
 
-    .join-info {
+    .join-info-carousel {
         padding: 15px;
+        min-height: 320px;
+        gap: 10px;
+    }
+
+    .carousel-nav {
+        width: 35px;
+        height: 35px;
+        font-size: 1.5rem;
+    }
+
+    .payout-grid {
+        gap: 8px;
+    }
+
+    .payout-item {
+        padding: 8px 12px;
+    }
+
+    .hand-examples {
+        gap: 8px;
+        flex-direction: column;
+    }
+
+    .example-hand {
+        min-width: auto;
+    }
+
+    .example-card {
+        padding: 10px 8px;
+        font-size: 1.1rem;
+        min-width: 38px;
+    }
+
+    .carousel-slide {
+        min-height: 240px;
+    }
+
+    /* Easter egg - smaller on mobile */
+    .easter-egg-content {
+        padding: 30px 20px;
+        max-width: 90%;
+    }
+
+    .easter-egg-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .easter-egg-cards {
+        gap: 10px;
+        margin: 20px 0;
+    }
+
+    .easter-egg-card {
+        padding: 20px 15px;
+        font-size: 2rem;
+    }
+
+    .easter-egg-content p {
+        font-size: 1rem;
     }
 
     /* Player seats - single column on mobile, hide empty seats */
@@ -547,12 +614,12 @@
     /* Side bets collapsed by default on mobile - use class for toggleability */
     .side-bets-list {
         display: none;
-        max-height: 150px;
+        grid-template-columns: 1fr;
     }
 
     /* When opened by JavaScript */
     .side-bets-list.open {
-        display: block !important;
+        display: grid !important;
     }
 
     .side-bets-toggle {
@@ -701,6 +768,12 @@
         font-size: 1rem;
     }
 
+    /* Tighter button spacing on very small screens */
+    .btn-footer-action {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
     /* Insufficient funds on smallest screens */
     .btn-footer-action.insufficient-funds {
         padding: 6px 8px;
@@ -721,6 +794,46 @@
         left: 10px;
         font-size: 0.9rem;
         padding: 12px 20px;
+    }
+
+    /* Rules modal on very small screens */
+    .rules-modal {
+        max-width: 100%;
+        width: 100%;
+        margin: 10px;
+    }
+
+    .rules-tabs {
+        gap: 5px;
+    }
+
+    .rules-tab {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .rules-content {
+        max-height: 50vh;
+    }
+
+    .rules-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .stats-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .stats-modal {
+        max-width: 100%;
+        width: 100%;
+        margin: 10px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
 }
 

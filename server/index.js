@@ -21,9 +21,16 @@ const io = new Server(server);
 // Serve static files from client directory
 app.use(express.static(path.join(__dirname, '../client')));
 
+// Serve clientV2 static files
+app.use('/v2', express.static(path.join(__dirname, '../clientV2')));
+
 // Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+app.get('/v2', (req, res) => {
+  res.sendFile(path.join(__dirname, '../clientV2/index.html'));
 });
 
 app.get('/host', (req, res) => {
@@ -81,6 +88,19 @@ io.on('connection', (socket) => {
       socket.emit('join-failed', {
         error: result.error
       });
+    }
+  });
+
+  socket.on('update-profile', (data) => {
+    const { playerName, playerColor } = data;
+    console.log(`[${new Date().toLocaleTimeString()}] ${socket.id} updating profile`);
+
+    const result = gameRoom.updateProfile(socket.id, playerName, playerColor);
+
+    if (result.success) {
+      socket.emit('profile-updated', { success: true });
+    } else {
+      socket.emit('profile-update-failed', { error: result.error });
     }
   });
 

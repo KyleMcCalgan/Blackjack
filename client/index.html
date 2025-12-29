@@ -11,6 +11,9 @@
 <body>
     <!-- Join Screen Overlay -->
     <div id="joinScreen" class="join-screen">
+        <!-- Floating Cards Background -->
+        <div class="floating-cards-bg" id="floatingCardsBg"></div>
+
         <div class="join-container">
             <h1>🎰 Blackjack</h1>
             <div id="connectionStatus" class="connection-status">
@@ -20,26 +23,122 @@
 
             <form id="joinForm" class="join-form">
                 <label for="playerName">Enter Your Name</label>
-                <input
-                    type="text"
-                    id="playerName"
-                    placeholder="Your name"
-                    maxlength="20"
-                    required
-                    autocomplete="off"
-                >
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="playerName"
+                        placeholder="Your name"
+                        maxlength="20"
+                        required
+                        autocomplete="off"
+                    >
+                    <div class="input-feedback">
+                        <span id="charCounter" class="char-counter">0/20</span>
+                        <span id="validationMsg" class="validation-msg"></span>
+                    </div>
+                </div>
                 <button type="submit" id="joinButton" disabled>
                     Join Game
                 </button>
             </form>
 
-            <div class="join-info">
-                <p>💡 Tips:</p>
-                <ul>
-                    <li>Up to 5 players can join</li>
-                    <li>First player becomes the host</li>
-                    <li>Host can start the game</li>
-                </ul>
+            <div class="join-info-carousel">
+                <button class="carousel-nav carousel-nav-left" id="carouselPrev">‹</button>
+
+                <div class="carousel-container">
+                    <div class="carousel-slides" id="carouselSlides">
+                        <!-- Slide 1: Game Info -->
+                        <div class="carousel-slide active">
+                            <h3>💡 Game Info</h3>
+                            <ul>
+                                <li>Up to 5 players can join</li>
+                                <li>First player becomes the host</li>
+                                <li>Host can configure and start the game</li>
+                                <li>Everyone starts with the same bankroll</li>
+                            </ul>
+                        </div>
+
+                        <!-- Slide 2: Payouts -->
+                        <div class="carousel-slide">
+                            <h3>💰 Payouts</h3>
+                            <div class="payout-grid">
+                                <div class="payout-item">
+                                    <span class="payout-label">Blackjack</span>
+                                    <span class="payout-value">3:2</span>
+                                </div>
+                                <div class="payout-item">
+                                    <span class="payout-label">Win</span>
+                                    <span class="payout-value">1:1</span>
+                                </div>
+                                <div class="payout-item">
+                                    <span class="payout-label">Insurance</span>
+                                    <span class="payout-value">2:1</span>
+                                </div>
+                                <div class="payout-item">
+                                    <span class="payout-label">PP</span>
+                                    <span class="payout-value">5:1 - 25:1</span>
+                                </div>
+                                <div class="payout-item">
+                                    <span class="payout-label">21+3</span>
+                                    <span class="payout-value">9:1 - 100:1</span>
+                                </div>
+                                <div class="payout-item">
+                                    <span class="payout-label">Bust It</span>
+                                    <span class="payout-value">2:1 - 250:1</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slide 3: Basic Strategy -->
+                        <div class="carousel-slide">
+                            <h3>🎯 Basic Strategy</h3>
+                            <ul>
+                                <li><strong>Always split</strong> Aces and 8s</li>
+                                <li><strong>Never split</strong> 5s or 10s</li>
+                                <li><strong>Double down</strong> on 11 vs dealer 2-10</li>
+                                <li><strong>Stand</strong> on hard 17 or higher</li>
+                                <li><strong>Hit</strong> on soft 17 or lower</li>
+                            </ul>
+                        </div>
+
+                        <!-- Slide 4: Hand Examples -->
+                        <div class="carousel-slide">
+                            <h3>Hand Examples</h3>
+                            <div class="hand-examples">
+                                <div class="example-hand">
+                                    <div class="example-label">Blackjack (21)</div>
+                                    <div class="example-cards">
+                                        <div class="example-card">A♠</div>
+                                        <div class="example-card">K♦</div>
+                                    </div>
+                                </div>
+                                <div class="example-hand">
+                                    <div class="example-label">Good Split</div>
+                                    <div class="example-cards">
+                                        <div class="example-card">A♥</div>
+                                        <div class="example-card">A♣</div>
+                                    </div>
+                                </div>
+                                <div class="example-hand">
+                                    <div class="example-label">Double Down</div>
+                                    <div class="example-cards">
+                                        <div class="example-card">6♠</div>
+                                        <div class="example-card">5♦</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="carousel-nav carousel-nav-right" id="carouselNext">›</button>
+
+                <div class="carousel-dots" id="carouselDots">
+                    <span class="dot active" data-slide="0"></span>
+                    <span class="dot" data-slide="1"></span>
+                    <span class="dot" data-slide="2"></span>
+                    <span class="dot" data-slide="3"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -57,6 +156,12 @@
                 </div>
             </div>
             <div class="header-right">
+                <button id="statsBtn" class="stats-btn" title="View Statistics">
+                    📊 Stats
+                </button>
+                <button id="rulesBtn" class="rules-btn" title="Game Rules">
+                    ℹ️ Rules
+                </button>
                 <button id="hostSettingsBtn" class="host-settings-btn" style="display: none;" title="Host Settings">
                     ⚙️ Settings
                 </button>
@@ -336,6 +441,249 @@
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelSettingsBtn">Cancel</button>
                 <button class="btn-primary" id="saveSettingsBtn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Betting Overlay Modal -->
+    <div id="bettingModal" class="modal betting-modal" style="display: none;">
+        <div class="modal-content betting-modal-content">
+            <div class="modal-header">
+                <h2>Place Your Bet</h2>
+                <button class="modal-close" id="closeBettingBtn">&times;</button>
+            </div>
+
+            <div class="modal-body" id="bettingModalBody">
+                <!-- Betting interface will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="modal" style="display: none;">
+        <div class="modal-content rules-modal">
+            <div class="modal-header">
+                <h2>📖 Blackjack Rules & Guide</h2>
+                <button class="modal-close" id="closeRulesBtn">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Tab Navigation -->
+                <div class="rules-tabs">
+                    <button class="rules-tab active" data-tab="basics">Basic Rules</button>
+                    <button class="rules-tab" data-tab="actions">Player Actions</button>
+                    <button class="rules-tab" data-tab="sidebets">Side Bets</button>
+                    <button class="rules-tab" data-tab="payouts">Payouts</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="rules-content">
+                    <!-- Basics Tab -->
+                    <div class="rules-tab-content active" id="basics-tab">
+                        <h3>🎯 Objective</h3>
+                        <p>Beat the dealer by getting a hand value as close to 21 as possible without going over.</p>
+
+                        <h3>🃏 Card Values</h3>
+                        <ul>
+                            <li><strong>Number cards (2-10):</strong> Face value</li>
+                            <li><strong>Face cards (J, Q, K):</strong> Worth 10</li>
+                            <li><strong>Aces:</strong> Worth 1 or 11 (your choice)</li>
+                        </ul>
+
+                        <h3>🎮 Game Flow</h3>
+                        <ol>
+                            <li><strong>Betting:</strong> Place your main bet and optional side bets</li>
+                            <li><strong>Dealing:</strong> Each player receives 2 cards face-up, dealer gets 1 face-up and 1 face-down</li>
+                            <li><strong>Player Turns:</strong> Each player decides to Hit, Stand, Double, or Split</li>
+                            <li><strong>Dealer Turn:</strong> Dealer must hit on 16 or less, stand on 17 or more</li>
+                            <li><strong>Results:</strong> Compare hands - closest to 21 wins!</li>
+                        </ol>
+
+                        <h3>⚡ Blackjack</h3>
+                        <p>An Ace and a 10-value card on your first two cards is a "Blackjack" - the best hand!</p>
+                    </div>
+
+                    <!-- Actions Tab -->
+                    <div class="rules-tab-content" id="actions-tab">
+                        <h3>✊ Hit</h3>
+                        <p>Take another card from the deck. You can hit as many times as you want until you stand or bust (go over 21).</p>
+
+                        <h3>✋ Stand</h3>
+                        <p>Keep your current hand and end your turn. The dealer will then play their hand.</p>
+
+                        <h3>⏫ Double Down</h3>
+                        <p>Double your bet and receive exactly one more card. Only available on your first two cards. Costs the same as your original bet.</p>
+                        <p><em>Example: If you bet $100, doubling costs another $100 for a total bet of $200.</em></p>
+
+                        <h3>✂️ Split</h3>
+                        <p>When you have two cards of the same rank (or any two 10-value cards), you can split them into two separate hands. Each hand gets a second card and you play them independently.</p>
+                        <ul>
+                            <li>Costs the same as your original bet (one bet per hand)</li>
+                            <li>You can split up to 4 hands total</li>
+                            <li>After splitting Aces, you usually get only one card per hand</li>
+                        </ul>
+
+                        <h3>🛡️ Insurance</h3>
+                        <p>When the dealer shows an Ace, you can buy insurance against the dealer having Blackjack.</p>
+                        <ul>
+                            <li>Costs half of your original bet</li>
+                            <li>If dealer has Blackjack, insurance pays 2:1</li>
+                            <li>If dealer doesn't have Blackjack, you lose the insurance bet</li>
+                        </ul>
+                        <p><em>Example: With a $100 bet, insurance costs $50. If dealer has Blackjack, you get $100 back from insurance.</em></p>
+                    </div>
+
+                    <!-- Side Bets Tab -->
+                    <div class="rules-tab-content" id="sidebets-tab">
+                        <h3>💎 Perfect Pairs</h3>
+                        <p>Bet that your first two cards will be a pair.</p>
+                        <div class="payout-table">
+                            <div class="payout-row">
+                                <span>Perfect Pair (same suit)</span>
+                                <span class="payout-value">25:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Colored Pair (same color, different suit)</span>
+                                <span class="payout-value">12:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Mixed Pair (different colors)</span>
+                                <span class="payout-value">6:1</span>
+                            </div>
+                        </div>
+                        <p><em>Example: Two 7♠ cards = Perfect Pair = 25:1 payout</em></p>
+
+                        <h3>💥 Bust It</h3>
+                        <p>Bet that the dealer will bust (go over 21) with 3+ cards.</p>
+                        <div class="payout-table">
+                            <div class="payout-row">
+                                <span>Dealer busts with 8+ cards</span>
+                                <span class="payout-value">250:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Dealer busts with 7 cards</span>
+                                <span class="payout-value">100:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Dealer busts with 6 cards</span>
+                                <span class="payout-value">50:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Dealer busts with 5 cards</span>
+                                <span class="payout-value">9:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Dealer busts with 4 cards</span>
+                                <span class="payout-value">4:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Dealer busts with 3 cards</span>
+                                <span class="payout-value">1:1</span>
+                            </div>
+                        </div>
+
+                        <h3>🃏 21+3</h3>
+                        <p>Bet on a poker-style hand using your two cards and the dealer's up card.</p>
+                        <div class="payout-table">
+                            <div class="payout-row">
+                                <span>Suited Three of a Kind</span>
+                                <span class="payout-value">100:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Straight Flush</span>
+                                <span class="payout-value">40:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Three of a Kind</span>
+                                <span class="payout-value">30:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Straight</span>
+                                <span class="payout-value">10:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Flush</span>
+                                <span class="payout-value">5:1</span>
+                            </div>
+                        </div>
+                        <p><em>Example: Your two 7s + dealer's 7 = Three of a Kind = 30:1 payout</em></p>
+                    </div>
+
+                    <!-- Payouts Tab -->
+                    <div class="rules-tab-content" id="payouts-tab">
+                        <h3>💰 Main Bet Payouts</h3>
+                        <div class="payout-table">
+                            <div class="payout-row">
+                                <span>Blackjack (Ace + 10-value card)</span>
+                                <span class="payout-value">3:2</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Win (beat dealer)</span>
+                                <span class="payout-value">1:1</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Push (tie with dealer)</span>
+                                <span class="payout-value">Push</span>
+                            </div>
+                            <div class="payout-row">
+                                <span>Loss (dealer beats you or you bust)</span>
+                                <span class="payout-value">Lose bet</span>
+                            </div>
+                        </div>
+
+                        <h3>📊 Payout Examples</h3>
+                        <div class="example-box">
+                            <h4>Main Bet: $100</h4>
+                            <ul>
+                                <li><strong>Blackjack:</strong> Win $150 (3:2 payout)</li>
+                                <li><strong>Win:</strong> Win $100 (1:1 payout)</li>
+                                <li><strong>Push:</strong> Get your $100 back</li>
+                                <li><strong>Loss:</strong> Lose your $100</li>
+                            </ul>
+                        </div>
+
+                        <div class="example-box">
+                            <h4>Perfect Pairs: $20</h4>
+                            <ul>
+                                <li><strong>Perfect Pair:</strong> Win $500 (25:1 payout)</li>
+                                <li><strong>Colored Pair:</strong> Win $240 (12:1 payout)</li>
+                                <li><strong>Mixed Pair:</strong> Win $120 (6:1 payout)</li>
+                                <li><strong>No Pair:</strong> Lose your $20</li>
+                            </ul>
+                        </div>
+
+                        <h3>💡 Tips</h3>
+                        <ul>
+                            <li>Blackjack always beats a hand of 21 made with 3+ cards</li>
+                            <li>Dealer must hit on 16 or less, stand on 17 or more</li>
+                            <li>Side bets are independent of your main hand result</li>
+                            <li>You can win/lose your main bet and side bets separately</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-primary" id="closeRulesBtn2">Got It!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal" style="display: none;">
+        <div class="modal-content stats-modal">
+            <div class="modal-header">
+                <h2>📊 Your Statistics</h2>
+                <button class="modal-close" id="closeStatsBtn">&times;</button>
+            </div>
+
+            <div class="modal-body" id="statsModalBody">
+                <!-- Stats will be dynamically inserted here -->
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" id="resetStatsBtn">Reset Stats</button>
+                <button class="btn-primary" id="closeStatsBtn2">Close</button>
             </div>
         </div>
     </div>

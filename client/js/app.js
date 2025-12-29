@@ -22,6 +22,298 @@ const gameState = {
     readyRequestPending: false
 };
 
+// ==================== STATS TRACKING SYSTEM ====================
+
+const gameStats = {
+    // Initialize or load stats from localStorage
+    init() {
+        const saved = localStorage.getItem('blackjackStats');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                Object.assign(this, data);
+            } catch (e) {
+                console.error('[Stats] Failed to load stats:', e);
+                this.reset();
+            }
+        } else {
+            this.reset();
+        }
+    },
+
+    // Reset all stats
+    reset() {
+        this.totalRounds = 0;
+        this.wins = 0;
+        this.losses = 0;
+        this.pushes = 0;
+        this.blackjacks = 0;
+        this.busts = 0;
+        this.totalWagered = 0;
+        this.totalWon = 0;
+        this.totalLost = 0;
+        this.biggestWin = 0;
+        this.biggestLoss = 0;
+        this.currentStreak = 0;
+        this.streakType = null; // 'win' or 'loss'
+        this.bestWinStreak = 0;
+        this.bestLossStreak = 0;
+        this.recentRounds = []; // Last 10 rounds
+        this.sideBetsPlayed = 0;
+        this.sideBetsWon = 0;
+        this.doubles = 0;
+        this.splits = 0;
+        this.insuranceTaken = 0;
+        this.insuranceWon = 0;
+        this.save();
+    },
+
+    // Save to localStorage
+    save() {
+        try {
+            const data = {
+                totalRounds: this.totalRounds,
+                wins: this.wins,
+                losses: this.losses,
+                pushes: this.pushes,
+                blackjacks: this.blackjacks,
+                busts: this.busts,
+                totalWagered: this.totalWagered,
+                totalWon: this.totalWon,
+                totalLost: this.totalLost,
+                biggestWin: this.biggestWin,
+                biggestLoss: this.biggestLoss,
+                currentStreak: this.currentStreak,
+                streakType: this.streakType,
+                bestWinStreak: this.bestWinStreak,
+                bestLossStreak: this.bestLossStreak,
+                recentRounds: this.recentRounds,
+                sideBetsPlayed: this.sideBetsPlayed,
+                sideBetsWon: this.sideBetsWon,
+                doubles: this.doubles,
+                splits: this.splits,
+                insuranceTaken: this.insuranceTaken,
+                insuranceWon: this.insuranceWon
+            };
+            localStorage.setItem('blackjackStats', JSON.stringify(data));
+        } catch (e) {
+            console.error('[Stats] Failed to save stats:', e);
+        }
+    },
+
+    // Record a round result
+    recordRound(result) {
+        this.totalRounds++;
+
+        // Update win/loss/push counts
+        if (result.outcome === 'win' || result.outcome === 'blackjack') {
+            this.wins++;
+            if (result.outcome === 'blackjack') this.blackjacks++;
+
+            // Update streak
+            if (this.streakType === 'win') {
+                this.currentStreak++;
+            } else {
+                this.currentStreak = 1;
+                this.streakType = 'win';
+            }
+            this.bestWinStreak = Math.max(this.bestWinStreak, this.currentStreak);
+        } else if (result.outcome === 'loss' || result.outcome === 'bust') {
+            this.losses++;
+            if (result.outcome === 'bust') this.busts++;
+
+            // Update streak
+            if (this.streakType === 'loss') {
+                this.currentStreak++;
+            } else {
+                this.currentStreak = 1;
+                this.streakType = 'loss';
+            }
+            this.bestLossStreak = Math.max(this.bestLossStreak, this.currentStreak);
+        } else if (result.outcome === 'push') {
+            this.pushes++;
+            this.currentStreak = 0;
+            this.streakType = null;
+        }
+
+        // Track money
+        this.totalWagered += result.betAmount || 0;
+        const profit = (result.profit || 0);
+
+        if (profit > 0) {
+            this.totalWon += profit;
+            this.biggestWin = Math.max(this.biggestWin, profit);
+        } else if (profit < 0) {
+            this.totalLost += Math.abs(profit);
+            this.biggestLoss = Math.max(this.biggestLoss, Math.abs(profit));
+        }
+
+        // Track side bets
+        if (result.sideBetsWagered && result.sideBetsWagered > 0) {
+            this.sideBetsPlayed++;
+            if (result.sideBetsProfit && result.sideBetsProfit > 0) {
+                this.sideBetsWon++;
+            }
+        }
+
+        // Track actions
+        if (result.doubled) this.doubles++;
+        if (result.split) this.splits++;
+        if (result.insurance) {
+            this.insuranceTaken++;
+            if (result.insuranceWon) this.insuranceWon++;
+        }
+
+        // Add to recent rounds (keep last 10)
+        this.recentRounds.unshift({
+            round: this.totalRounds,
+            outcome: result.outcome,
+            profit: profit,
+            betAmount: result.betAmount,
+            timestamp: Date.now()
+        });
+        if (this.recentRounds.length > 10) {
+            this.recentRounds.pop();
+        }
+
+        this.save();
+    },
+
+    // Get computed stats
+    getStats() {
+        const winRate = this.totalRounds > 0 ? ((this.wins / this.totalRounds) * 100).toFixed(1) : '0.0';
+        const netProfit = this.totalWon - this.totalLost;
+        const avgBet = this.totalRounds > 0 ? (this.totalWagered / this.totalRounds).toFixed(0) : 0;
+        const sideBetWinRate = this.sideBetsPlayed > 0 ? ((this.sideBetsWon / this.sideBetsPlayed) * 100).toFixed(1) : '0.0';
+        const insuranceWinRate = this.insuranceTaken > 0 ? ((this.insuranceWon / this.insuranceTaken) * 100).toFixed(1) : '0.0';
+
+        return {
+            // Overall stats
+            totalRounds: this.totalRounds,
+            wins: this.wins,
+            losses: this.losses,
+            pushes: this.pushes,
+            winRate: winRate,
+
+            // Special outcomes
+            blackjacks: this.blackjacks,
+            busts: this.busts,
+
+            // Money stats
+            totalWagered: this.totalWagered,
+            totalWon: this.totalWon,
+            totalLost: this.totalLost,
+            netProfit: netProfit,
+            avgBet: avgBet,
+            biggestWin: this.biggestWin,
+            biggestLoss: this.biggestLoss,
+
+            // Streaks
+            currentStreak: this.currentStreak,
+            streakType: this.streakType,
+            bestWinStreak: this.bestWinStreak,
+            bestLossStreak: this.bestLossStreak,
+
+            // Side bets & actions
+            sideBetsPlayed: this.sideBetsPlayed,
+            sideBetsWon: this.sideBetsWon,
+            sideBetWinRate: sideBetWinRate,
+            doubles: this.doubles,
+            splits: this.splits,
+            insuranceTaken: this.insuranceTaken,
+            insuranceWon: this.insuranceWon,
+            insuranceWinRate: insuranceWinRate,
+
+            // Recent history
+            recentRounds: this.recentRounds
+        };
+    }
+};
+
+// ==================== FLOATING CARDS ANIMATION ====================
+
+function initFloatingCards() {
+    const container = document.getElementById('floatingCardsBg');
+    if (!container) return;
+
+    const cards = [
+        { symbol: 'A♠', color: 'black' },
+        { symbol: 'K♥', color: 'red' },
+        { symbol: 'Q♦', color: 'red' },
+        { symbol: 'J♣', color: 'black' },
+        { symbol: '10♠', color: 'black' },
+        { symbol: '9♥', color: 'red' },
+        { symbol: '8♦', color: 'red' },
+        { symbol: '7♣', color: 'black' }
+    ];
+
+    const floatingCards = [];
+    const numCards = 8;
+
+    // Create card elements
+    for (let i = 0; i < numCards; i++) {
+        const cardData = cards[i % cards.length];
+        const card = document.createElement('div');
+        card.className = `floating-card ${cardData.color}`;
+        card.textContent = cardData.symbol;
+
+        // Random starting position
+        const x = Math.random() * (window.innerWidth - 60);
+        const y = Math.random() * (window.innerHeight - 85);
+
+        card.style.left = x + 'px';
+        card.style.top = y + 'px';
+
+        container.appendChild(card);
+
+        // Store card data for animation
+        floatingCards.push({
+            element: card,
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 2, // Random velocity X (-1 to 1)
+            vy: (Math.random() - 0.5) * 2, // Random velocity Y (-1 to 1)
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 2
+        });
+    }
+
+    // Animation loop
+    function animate() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const isMobile = width <= 480;
+        const cardWidth = isMobile ? 45 : 60;
+        const cardHeight = isMobile ? 64 : 85;
+
+        floatingCards.forEach(card => {
+            // Update position
+            card.x += card.vx;
+            card.y += card.vy;
+            card.rotation += card.rotationSpeed;
+
+            // Bounce off edges
+            if (card.x <= 0 || card.x >= width - cardWidth) {
+                card.vx *= -1;
+                card.x = Math.max(0, Math.min(width - cardWidth, card.x));
+            }
+            if (card.y <= 0 || card.y >= height - cardHeight) {
+                card.vy *= -1;
+                card.y = Math.max(0, Math.min(height - cardHeight, card.y));
+            }
+
+            // Apply position and rotation
+            card.element.style.left = card.x + 'px';
+            card.element.style.top = card.y + 'px';
+            card.element.style.transform = `rotate(${card.rotation}deg)`;
+        });
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
 // ==================== INITIALIZATION ====================
 
 // Initialize socket connection
@@ -51,6 +343,8 @@ function initSocket() {
     // Betting events
     gameState.socket.on('bet-placed', handleBetPlaced);
     gameState.socket.on('bet-failed', handleBetFailed);
+    gameState.socket.on('bet-cancelled', handleBetCancelled);
+    gameState.socket.on('cancel-bet-failed', handleCancelBetFailed);
 
     // Ready events
     gameState.socket.on('ready-confirmed', handleReadyConfirmed);
@@ -153,24 +447,243 @@ function handleReconnectFailed() {
 function setupJoinForm() {
     const joinForm = document.getElementById('joinForm');
     const playerNameInput = document.getElementById('playerName');
+    const charCounter = document.getElementById('charCounter');
+    const validationMsg = document.getElementById('validationMsg');
+    const joinButton = document.getElementById('joinButton');
+
+    // Real-time validation and character counter
+    function validateInput() {
+        const value = playerNameInput.value;
+        const length = value.length;
+
+        // Update character counter
+        charCounter.textContent = `${length}/20`;
+
+        // Validation logic
+        if (length === 0) {
+            playerNameInput.classList.remove('valid', 'invalid');
+            validationMsg.textContent = '';
+            validationMsg.classList.remove('success', 'error');
+            joinButton.disabled = true;
+        } else if (length < 2) {
+            playerNameInput.classList.remove('valid');
+            playerNameInput.classList.add('invalid');
+            validationMsg.textContent = 'Too short';
+            validationMsg.classList.remove('success');
+            validationMsg.classList.add('error');
+            joinButton.disabled = true;
+        } else if (length > 20) {
+            playerNameInput.classList.remove('valid');
+            playerNameInput.classList.add('invalid');
+            validationMsg.textContent = 'Too long';
+            validationMsg.classList.remove('success');
+            validationMsg.classList.add('error');
+            joinButton.disabled = true;
+        } else {
+            playerNameInput.classList.remove('invalid');
+            playerNameInput.classList.add('valid');
+            validationMsg.textContent = 'Looks good!';
+            validationMsg.classList.remove('error');
+            validationMsg.classList.add('success');
+            joinButton.disabled = !gameState.connected;
+        }
+    }
+
+    // Listen for input changes
+    playerNameInput.addEventListener('input', validateInput);
+    playerNameInput.addEventListener('keyup', validateInput);
 
     joinForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
         const playerName = playerNameInput.value.trim();
 
-        if (!playerName) {
-            alert('Please enter your name');
+        if (!playerName || playerName.length < 2) {
             return;
         }
 
         if (playerName.length > 20) {
-            alert('Name must be 20 characters or less');
             return;
         }
 
         console.log('[App] Attempting to join game as:', playerName);
         gameState.socket.emit('join-game', { playerName });
+    });
+}
+
+function setupEasterEgg() {
+    const title = document.querySelector('.join-container h1');
+    if (!title) return;
+
+    let clickCount = 0;
+    let clickTimeout = null;
+
+    title.addEventListener('click', () => {
+        clickCount++;
+
+        // Reset after 2 seconds of no clicks
+        clearTimeout(clickTimeout);
+        clickTimeout = setTimeout(() => {
+            clickCount = 0;
+        }, 2000);
+
+        // Easter egg trigger
+        if (clickCount === 3) {
+            clickCount = 0;
+            dealEasterEggHand();
+        }
+    });
+}
+
+function dealEasterEggHand() {
+    // Define all possible cards
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    // Generate random hand (2 cards)
+    function getRandomCard() {
+        const rank = ranks[Math.floor(Math.random() * ranks.length)];
+        const suit = suits[Math.floor(Math.random() * suits.length)];
+        const isRed = suit === '♥' || suit === '♦';
+        return { display: rank + suit, isRed };
+    }
+
+    const card1 = getRandomCard();
+    const card2 = getRandomCard();
+
+    // Calculate hand value
+    function getCardValue(card) {
+        const rank = card.display.slice(0, -1); // Remove suit
+        if (rank === 'A') return 11;
+        if (['J', 'Q', 'K'].includes(rank)) return 10;
+        return parseInt(rank);
+    }
+
+    let total = getCardValue(card1) + getCardValue(card2);
+    let hasAce = card1.display.startsWith('A') || card2.display.startsWith('A');
+
+    // Adjust for ace if busting
+    if (total > 21 && hasAce) {
+        total -= 10;
+    }
+
+    // Determine message
+    let message;
+    let emoji;
+    if (total === 21 && (card1.display.startsWith('A') || card2.display.startsWith('A'))) {
+        message = 'Blackjack! Perfect start!';
+        emoji = '🎉';
+    } else if (total === 21) {
+        message = 'Lucky 21! Great hand!';
+        emoji = '🎊';
+    } else if (total >= 17 && total <= 20) {
+        message = `Strong ${total}! Good odds!`;
+        emoji = '✨';
+    } else if (total >= 12 && total <= 16) {
+        message = `${total} - Play it safe!`;
+        emoji = '🎲';
+    } else {
+        message = `${total} - Hit or stand?`;
+        emoji = '🃏';
+    }
+
+    // Create overlay for the easter egg
+    const overlay = document.createElement('div');
+    overlay.className = 'easter-egg-overlay';
+    overlay.innerHTML = `
+        <div class="easter-egg-content">
+            <h2>${emoji} Your Hand!</h2>
+            <div class="easter-egg-cards">
+                <div class="easter-egg-card ${card1.isRed ? 'red' : ''}">${card1.display}</div>
+                <div class="easter-egg-card ${card2.isRed ? 'red' : ''}">${card2.display}</div>
+            </div>
+            <p>${message}</p>
+            <button class="easter-egg-close">Continue</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Animate cards in
+    setTimeout(() => {
+        overlay.classList.add('active');
+    }, 10);
+
+    // Close button
+    overlay.querySelector('.easter-egg-close').addEventListener('click', () => {
+        overlay.classList.remove('active');
+        setTimeout(() => {
+            overlay.remove();
+        }, 300);
+    });
+
+    // Click outside to close
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        }
+    });
+}
+
+function setupCarousel() {
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.carousel-dots .dot');
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+
+    function showSlide(index) {
+        // Wrap around
+        if (index >= slides.length) {
+            currentSlide = 0;
+        } else if (index < 0) {
+            currentSlide = slides.length - 1;
+        } else {
+            currentSlide = index;
+        }
+
+        // Remove active class from all slides and dots
+        slides.forEach(slide => slide.classList.remove('active'));
+        dots.forEach(dot => dot.classList.remove('active'));
+
+        // Add active class to current slide and dot
+        slides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+    }
+
+    // Navigation buttons
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            showSlide(currentSlide - 1);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            showSlide(currentSlide + 1);
+        });
+    }
+
+    // Dot navigation
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            showSlide(index);
+        });
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        const joinScreen = document.getElementById('joinScreen');
+        if (joinScreen && joinScreen.style.display !== 'none') {
+            if (e.key === 'ArrowLeft') {
+                showSlide(currentSlide - 1);
+            } else if (e.key === 'ArrowRight') {
+                showSlide(currentSlide + 1);
+            }
+        }
     });
 }
 
@@ -288,10 +801,14 @@ function handleGameState(state) {
             // Footer will be populated by showPlayerActionControls if it's player's turn
             // Otherwise hide it
             if (state.currentPlayer !== gameState.playerId) {
-                renderUnifiedActionFooter('other', currentPlayer, state.config);
+                renderUnifiedActionFooter(state.phase, currentPlayer, state.config);
             }
+        } else if (state.phase === 'insurance') {
+            // Hide footer during insurance phase
+            renderUnifiedActionFooter('insurance', currentPlayer, state.config);
         } else {
-            renderUnifiedActionFooter('other', currentPlayer, state.config);
+            // Lobby, dealer, results phases
+            renderUnifiedActionFooter(state.phase, currentPlayer, state.config);
         }
     }
 }
@@ -354,6 +871,17 @@ function handleBetFailed(data) {
         btn.disabled = false;
         btn.style.opacity = '1';
     });
+}
+
+function handleBetCancelled(data) {
+    console.log('[App] Bet cancelled successfully');
+    showNotification('Bet cancelled', 'success');
+    // Game state update will handle UI refresh
+}
+
+function handleCancelBetFailed(data) {
+    console.error('[App] Cancel bet failed:', data.error);
+    showNotification('Failed to cancel bet: ' + data.error, 'error');
 }
 
 function handleReadyConfirmed(data) {
@@ -612,11 +1140,9 @@ function updateControlsArea(state) {
             gameState.socket.emit('start-game');
         });
     } else if (state.phase === 'betting') {
-        // Clear action controls
+        // Clear both control areas - betting now happens in overlay
+        controlsArea.innerHTML = '';
         if (actionControlsArea) actionControlsArea.innerHTML = '';
-
-        // Show betting interface
-        showBettingInterface(state);
     } else if (state.phase === 'insurance' && currentPlayer) {
         // Clear action controls
         if (actionControlsArea) actionControlsArea.innerHTML = '';
@@ -642,27 +1168,25 @@ function updateLobbySettingsDisplay(config) {
 
 // ==================== BETTING INTERFACE ====================
 
-function showBettingInterface(state) {
-    const controlsArea = document.getElementById('controlsArea');
-    const config = state.config;
-    const currentPlayer = state.players.find(p => p.id === gameState.playerId);
-
-    if (!currentPlayer || !config) return;
-
-    // If player already placed a bet, clear saved bet state
-    if (currentPlayer.currentBet > 0) {
-        gameState.currentBets = null;
-    }
-
-    const minBet = config.minBet;
-    const maxBet = config.maxBet || currentPlayer.bankroll;
-
+/**
+ * Generate betting interface HTML
+ * @param {Object} config - Game configuration
+ * @param {Number} maxBet - Maximum bet amount
+ * @returns {String} HTML string for betting interface
+ */
+function generateBettingInterfaceHTML(config, maxBet) {
     // Define chip denominations
     const chipValues = [1, 5, 10, 25, 50, 100, 500];
     const availableChips = chipValues.filter(v => v <= maxBet);
 
-    controlsArea.innerHTML = `
+    const html = `
         <div class="betting-container">
+            <!-- Total Bet Display -->
+            <div class="total-bet-display">
+                <div class="total-bet-label">Total Bet</div>
+                <div class="total-bet-value" id="totalBetValue">$0</div>
+            </div>
+
             <div class="betting-main">
                 <div class="bet-section">
                     <label class="bet-label">Main Bet</label>
@@ -744,11 +1268,89 @@ function showBettingInterface(state) {
                 </div>
             </div>
 
+            <div class="betting-footer" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light); text-align: center;">
+                <button class="btn-primary" id="placeBetBtnModal" style="min-width: 200px; padding: 16px 32px; font-size: 1.1rem;">
+                    Place Bet
+                </button>
+            </div>
         </div>
     `;
 
+    return html;
+}
+
+/**
+ * Open the betting overlay modal
+ * @param {Boolean} editMode - If true, load player's current bet from server state
+ */
+function openBettingOverlay(editMode = false) {
+    console.log('[App] Opening betting overlay, editMode:', editMode);
+
+    const modal = document.getElementById('bettingModal');
+    const modalBody = document.getElementById('bettingModalBody');
+
+    if (!modal) {
+        console.error('[App] Betting modal not found!');
+        return;
+    }
+
+    if (!modalBody) {
+        console.error('[App] Betting modal body not found!');
+        return;
+    }
+
+    if (!gameState.config) {
+        console.error('[App] No game config available');
+        return;
+    }
+
+    const currentPlayer = gameState.players?.find(p => p.id === gameState.playerId);
+    if (!currentPlayer) {
+        console.error('[App] Current player not found');
+        return;
+    }
+
+    const minBet = gameState.config.minBet;
+    const maxBet = gameState.config.maxBet || currentPlayer.bankroll;
+
+    console.log('[App] Generating betting interface HTML...');
+    // Generate and insert betting interface
+    const html = generateBettingInterfaceHTML(gameState.config, maxBet);
+    console.log('[App] HTML generated, length:', html?.length);
+
+    modalBody.innerHTML = html;
+
+    console.log('[App] Setting up betting controls...');
     // Set up event listeners
-    setupBettingControls(minBet, maxBet);
+    setupBettingControls(minBet, maxBet, editMode, currentPlayer);
+
+    console.log('[App] Showing modal...');
+    // Show modal
+    modal.style.display = 'flex';
+
+    console.log('[App] Modal should now be visible');
+}
+
+/**
+ * Close the betting overlay modal
+ * Discards any in-progress bets that haven't been placed
+ */
+function closeBettingOverlay() {
+    console.log('[App] Closing betting overlay');
+    const modal = document.getElementById('bettingModal');
+
+    if (modal) {
+        modal.style.display = 'none';
+    }
+
+    // Clear in-progress bets (discard changes)
+    gameState.currentBets = null;
+    console.log('[App] Betting overlay closed, in-progress bets cleared');
+}
+
+function showBettingInterface(state) {
+    // This function is no longer used - betting happens in the overlay
+    // Keep it for now in case of fallback, but it does nothing
 }
 
 // Helper function to update the footer Place Bet button
@@ -763,23 +1365,34 @@ function updateFooterPlaceBetButton(mainBet, minBet) {
     }
 }
 
-function setupBettingControls(minBet, maxBet) {
-    // Track bet amounts - restore from saved state if available
-    const bets = gameState.currentBets || {
-        main: 0,
-        perfectPairs: 0,
-        bustIt: 0,
-        twentyOnePlus3: 0
-    };
+function setupBettingControls(minBet, maxBet, editMode = false, currentPlayer = null) {
+    // Track bet amounts
+    let bets;
 
-    // Initialize display with saved values
+    if (editMode && currentPlayer && currentPlayer.currentBet > 0) {
+        // Edit mode: Load player's current bet from server state
+        bets = {
+            main: currentPlayer.currentBet,
+            perfectPairs: currentPlayer.sideBets?.perfectPairs || 0,
+            bustIt: currentPlayer.sideBets?.bustIt || 0,
+            twentyOnePlus3: currentPlayer.sideBets?.twentyOnePlus3 || 0
+        };
+    } else {
+        // New bet: Start fresh (no saved state in overlay)
+        bets = {
+            main: 0,
+            perfectPairs: 0,
+            bustIt: 0,
+            twentyOnePlus3: 0
+        };
+    }
+
+    // Initialize display with bet values
     updateBetDisplay('main', bets.main);
     updateBetDisplay('perfectPairs', bets.perfectPairs);
     updateBetDisplay('bustIt', bets.bustIt);
     updateBetDisplay('twentyOnePlus3', bets.twentyOnePlus3);
-
-    // Initialize footer button state
-    updateFooterPlaceBetButton(bets.main, minBet);
+    updateTotalBetDisplay();
 
     // Update displays helper function (defined before use)
     function updateBetDisplay(betType, amount) {
@@ -789,6 +1402,15 @@ function setupBettingControls(minBet, maxBet) {
         } else {
             const el = document.getElementById(`${betType}Value`);
             if (el) el.textContent = '$' + amount;
+        }
+    }
+
+    // Update total bet display
+    function updateTotalBetDisplay() {
+        const total = bets.main + bets.perfectPairs + bets.bustIt + bets.twentyOnePlus3;
+        const totalEl = document.getElementById('totalBetValue');
+        if (totalEl) {
+            totalEl.textContent = '$' + total;
         }
     }
 
@@ -826,11 +1448,8 @@ function setupBettingControls(minBet, maxBet) {
             }
 
             updateBetDisplay(betType, bets[betType]);
-            updatePlaceBetButton();
-            updateFooterPlaceBetButton(bets.main, minBet);
-
-            // Save to global state for persistence
-            gameState.currentBets = { ...bets };
+            updateTotalBetDisplay();
+            updatePlaceBetModalButton();
 
             // Visual feedback
             chip.classList.add('chip-clicked');
@@ -842,9 +1461,8 @@ function setupBettingControls(minBet, maxBet) {
     document.getElementById('clearMainBet')?.addEventListener('click', () => {
         bets.main = 0;
         updateBetDisplay('main', 0);
-        updatePlaceBetButton();
-        updateFooterPlaceBetButton(0, minBet);
-        gameState.currentBets = { ...bets };
+        updateTotalBetDisplay();
+        updatePlaceBetModalButton();
     });
 
     document.querySelectorAll('.btn-clear-side').forEach(btn => {
@@ -852,82 +1470,27 @@ function setupBettingControls(minBet, maxBet) {
             const betType = btn.dataset.side;
             bets[betType] = 0;
             updateBetDisplay(betType, 0);
-            gameState.currentBets = { ...bets };
+            updateTotalBetDisplay();
         });
     });
 
-    // Sticky action bar buttons - Place bet
-    document.getElementById('placeBetBtnAction')?.addEventListener('click', () => {
+    // Modal Place Bet button
+    document.getElementById('placeBetBtnModal')?.addEventListener('click', () => {
+        if (bets.main < minBet) {
+            showNotification(`Minimum bet is $${minBet}`, 'error');
+            return;
+        }
+
+        // Place the bet
         placeBet(bets);
+
+        // Close the overlay on success (server will send game state update)
+        closeBettingOverlay();
     });
 
-    // Sticky action bar buttons - Cancel bet
-    document.getElementById('cancelBetBtnAction')?.addEventListener('click', () => {
-        cancelBet();
-    });
-
-    // Sticky action bar buttons - Sit Out
-    document.getElementById('sitOutBtnAction')?.addEventListener('click', () => {
-        console.log('[App] Sitting out this round');
-        gameState.socket.emit('sit-out', {});
-    });
-
-    // Sticky action bar buttons - Rejoin
-    document.getElementById('rejoinBtnAction')?.addEventListener('click', () => {
-        console.log('[App] Rejoining game');
-        gameState.socket.emit('cancel-sit-out', {});
-    });
-
-    // Ready checkbox in action bar - with debouncing and loading state
-    document.getElementById('readyCheckboxAction')?.addEventListener('change', (e) => {
-        const isReady = e.target.checked;
-
-        // Prevent double-clicking
-        if (gameState.readyRequestPending) {
-            console.log('[App] Ready request already pending');
-            e.target.checked = !isReady; // Revert checkbox
-            return;
-        }
-
-        // Only allow checking (ready = true), not unchecking
-        if (!isReady) {
-            console.log('[App] Cannot uncheck ready - ready is final');
-            e.target.checked = true; // Force back to checked
-            showNotification('Ready status cannot be changed once set', 'info');
-            return;
-        }
-
-        console.log('[App] Sending ready signal to server...');
-
-        // Set pending flag
-        gameState.readyRequestPending = true;
-
-        // Disable checkbox during request
-        e.target.disabled = true;
-
-        // Send ready signal
-        gameState.socket.emit('ready-bet', { ready: true });
-
-        // Timeout after 5 seconds if no response
-        setTimeout(() => {
-            if (gameState.readyRequestPending) {
-                console.log('[App] Ready request timed out');
-                gameState.readyRequestPending = false;
-
-                // Re-enable checkbox and uncheck
-                if (e.target) {
-                    e.target.disabled = false;
-                    e.target.checked = false;
-                }
-
-                showNotification('Request timed out. Please try again.', 'error');
-            }
-        }, 5000);
-    });
-
-    // Enable/disable place bet button based on minimum bet
-    function updatePlaceBetButton() {
-        const placeBetBtn = document.getElementById('placeBetBtnAction');
+    // Enable/disable modal place bet button based on minimum bet
+    function updatePlaceBetModalButton() {
+        const placeBetBtn = document.getElementById('placeBetBtnModal');
         if (placeBetBtn) {
             if (bets.main >= minBet) {
                 placeBetBtn.disabled = false;
@@ -937,8 +1500,8 @@ function setupBettingControls(minBet, maxBet) {
         }
     }
 
-    // Initialize place bet button state
-    updatePlaceBetButton();
+    // Initialize modal place bet button state
+    updatePlaceBetModalButton();
 }
 
 function placeBet(bets) {
@@ -993,12 +1556,12 @@ function renderUnifiedActionFooter(phase, player, config) {
 
     // Set mobile phase data attribute for CSS targeting
     if (window.innerWidth <= 480) {
-        if (phase === 'betting') {
-            document.body.setAttribute('data-mobile-phase', 'betting');
-        } else if (phase === 'playing' || phase === 'dealer' || phase === 'insurance') {
+        if (phase === 'playing' || phase === 'dealer' || phase === 'insurance') {
             // All game-in-progress phases should show the table
             document.body.setAttribute('data-mobile-phase', 'playing');
         } else {
+            // For betting and other phases, don't set mobile phase
+            // Betting now happens in modal overlay, table stays visible
             document.body.removeAttribute('data-mobile-phase');
         }
     }
@@ -1011,14 +1574,10 @@ function renderUnifiedActionFooter(phase, player, config) {
         const isReady = player.ready;
         const isEliminated = player.eliminated;
 
-        // Check if minimum bet is met (for Place Bet button)
-        const currentBets = gameState.currentBets || { main: 0 };
-        const minBet = config?.minBet || 10;
-        const canPlaceBet = currentBets.main >= minBet;
-
         // Determine which buttons to show
-        // Left button: Sit Out (no bet) or Rejoin (eliminated) or empty
-        // Right button: Place Bet (no bet) or Ready (has bet)
+        // No bet: Sit Out | Place Bet
+        // Bet placed, not ready: Cancel Bet | Edit Bet | Ready
+        // Ready: ✓ Ready (disabled)
 
         content.innerHTML = `
             <div class="footer-buttons-betting">
@@ -1030,10 +1589,20 @@ function renderUnifiedActionFooter(phase, player, config) {
                     <button class="btn-footer-action btn-footer-sitout" id="sitOutBtnFooter">
                         Sit Out
                     </button>
+                ` : hasBet && !isReady ? `
+                    <button class="btn-footer-action btn-footer-cancel" id="cancelBetBtnFooter">
+                        Cancel Bet
+                    </button>
                 ` : '<div></div>'}
 
+                ${hasBet && !isReady ? `
+                    <button class="btn-footer-action btn-footer-edit" id="editBetBtnFooter">
+                        Edit Bet
+                    </button>
+                ` : ''}
+
                 ${!hasBet ? `
-                    <button class="btn-footer-action btn-footer-ready" id="placeBetBtnFooter" ${!canPlaceBet ? 'disabled' : ''}>
+                    <button class="btn-footer-action btn-footer-ready" id="placeBetBtnFooter">
                         Place Bet
                     </button>
                 ` : `
@@ -1049,6 +1618,8 @@ function renderUnifiedActionFooter(phase, player, config) {
         const rejoinBtn = document.getElementById('rejoinBtnFooter');
         const placeBetBtn = document.getElementById('placeBetBtnFooter');
         const readyBtn = document.getElementById('readyBtnFooter');
+        const cancelBetBtn = document.getElementById('cancelBetBtnFooter');
+        const editBetBtn = document.getElementById('editBetBtnFooter');
 
         if (sitOutBtn) {
             sitOutBtn.addEventListener('click', handleSitOut);
@@ -1060,19 +1631,24 @@ function renderUnifiedActionFooter(phase, player, config) {
 
         if (placeBetBtn) {
             placeBetBtn.addEventListener('click', () => {
-                // Get current bets from global state or calculate from UI
-                const bets = gameState.currentBets || {
-                    main: 0,
-                    perfectPairs: 0,
-                    bustIt: 0,
-                    twentyOnePlus3: 0
-                };
-                placeBet(bets);
+                // Open betting overlay
+                openBettingOverlay(false);
             });
         }
 
         if (readyBtn) {
             readyBtn.addEventListener('click', handleReadyClick);
+        }
+
+        if (cancelBetBtn) {
+            cancelBetBtn.addEventListener('click', cancelBet);
+        }
+
+        if (editBetBtn) {
+            editBetBtn.addEventListener('click', () => {
+                // Open betting overlay in edit mode
+                openBettingOverlay(true);
+            });
         }
 
     } else if (phase === 'playing') {
@@ -1568,6 +2144,58 @@ function showResultsModal(myResults, roundData) {
     const isWin = netProfit > 0;
     const isPush = netProfit === 0;
 
+    // Record stats
+    const hasBlackjack = myResults.hands.some(h => h.result === 'blackjack');
+    const hasBust = myResults.hands.some(h => h.result === 'bust');
+    const hadDouble = myResults.hands.some(h => h.doubled);
+    const hadSplit = myResults.hands.length > 1;
+
+    // Calculate side bets wagered and profit
+    let sideBetsWagered = 0;
+    let sideBetsProfit = 0;
+
+    if (myResults.sideBets.perfectPairs) {
+        sideBetsWagered += myResults.sideBets.perfectPairs.bet;
+        sideBetsProfit += (myResults.sideBets.perfectPairs.payout - myResults.sideBets.perfectPairs.bet);
+    }
+    if (myResults.sideBets.bustIt) {
+        sideBetsWagered += myResults.sideBets.bustIt.bet;
+        sideBetsProfit += (myResults.sideBets.bustIt.payout - myResults.sideBets.bustIt.bet);
+    }
+    if (myResults.sideBets.twentyOnePlus3) {
+        sideBetsWagered += myResults.sideBets.twentyOnePlus3.bet;
+        sideBetsProfit += (myResults.sideBets.twentyOnePlus3.payout - myResults.sideBets.twentyOnePlus3.bet);
+    }
+
+    // Determine outcome for stats
+    let outcome;
+    if (hasBlackjack && isWin) {
+        outcome = 'blackjack';
+    } else if (hasBust) {
+        outcome = 'bust';
+    } else if (isPush) {
+        outcome = 'push';
+    } else if (isWin) {
+        outcome = 'win';
+    } else {
+        outcome = 'loss';
+    }
+
+    // Record round in stats
+    gameStats.recordRound({
+        outcome: outcome,
+        betAmount: totalBet,
+        profit: netProfit,
+        doubled: hadDouble,
+        split: hadSplit,
+        sideBetsWagered: sideBetsWagered,
+        sideBetsProfit: sideBetsProfit,
+        insurance: myResults.insurance || false,
+        insuranceWon: myResults.insuranceWon || false
+    });
+
+    console.log('[App] Stats recorded for round:', outcome, 'Profit:', netProfit);
+
     // Build results HTML
     let html = `
         <div class="results-summary ${isWin ? 'win' : isPush ? 'push' : 'loss'}">
@@ -1700,10 +2328,342 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// ==================== RULES MODAL ====================
+
+function setupRulesModal() {
+    const rulesBtn = document.getElementById('rulesBtn');
+    const closeBtn = document.getElementById('closeRulesBtn');
+    const closeBtn2 = document.getElementById('closeRulesBtn2');
+
+    // Open modal
+    if (rulesBtn) {
+        rulesBtn.addEventListener('click', openRulesModal);
+    }
+
+    // Close buttons
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeRulesModal);
+    }
+    if (closeBtn2) {
+        closeBtn2.addEventListener('click', closeRulesModal);
+    }
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.rules-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchRulesTab(tabName);
+        });
+    });
+
+    // Close on backdrop click
+    const modal = document.getElementById('rulesModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'rulesModal') {
+                closeRulesModal();
+            }
+        });
+    }
+}
+
+function openRulesModal() {
+    console.log('[App] Opening rules modal');
+    const modal = document.getElementById('rulesModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeRulesModal() {
+    console.log('[App] Closing rules modal');
+    const modal = document.getElementById('rulesModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function switchRulesTab(tabName) {
+    console.log('[App] Switching to tab:', tabName);
+
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.rules-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.rules-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+
+    // Add active class to selected tab and content
+    const selectedTab = document.querySelector(`.rules-tab[data-tab="${tabName}"]`);
+    const selectedContent = document.getElementById(`${tabName}-tab`);
+
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    if (selectedContent) {
+        selectedContent.classList.add('active');
+    }
+}
+
+// ==================== STATS MODAL ====================
+
+function setupStatsModal() {
+    const statsBtn = document.getElementById('statsBtn');
+    const closeBtn = document.getElementById('closeStatsBtn');
+    const closeBtn2 = document.getElementById('closeStatsBtn2');
+    const resetBtn = document.getElementById('resetStatsBtn');
+
+    // Open modal
+    if (statsBtn) {
+        statsBtn.addEventListener('click', openStatsModal);
+    }
+
+    // Close buttons
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeStatsModal);
+    }
+    if (closeBtn2) {
+        closeBtn2.addEventListener('click', closeStatsModal);
+    }
+
+    // Reset stats
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all statistics? This cannot be undone.')) {
+                gameStats.reset();
+                renderStatsContent();
+                showNotification('Stats reset successfully', 'success');
+            }
+        });
+    }
+
+    // Close on backdrop click
+    const modal = document.getElementById('statsModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'statsModal') {
+                closeStatsModal();
+            }
+        });
+    }
+}
+
+function openStatsModal() {
+    console.log('[App] Opening stats modal');
+
+    // Auto sit-out if in betting phase and not already sitting out
+    if (gameState.phase === 'betting') {
+        const currentPlayer = gameState.players?.find(p => p.id === gameState.playerId);
+        if (currentPlayer && !currentPlayer.sittingOut && !currentPlayer.ready) {
+            console.log('[App] Auto sitting out to view stats');
+            gameState.socket.emit('sit-out', {});
+            showNotification('Sitting out this round to view stats', 'info');
+        }
+    }
+
+    // Render stats content
+    renderStatsContent();
+
+    // Show modal
+    const modal = document.getElementById('statsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeStatsModal() {
+    console.log('[App] Closing stats modal');
+    const modal = document.getElementById('statsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function renderStatsContent() {
+    const modalBody = document.getElementById('statsModalBody');
+    if (!modalBody) return;
+
+    const stats = gameStats.getStats();
+
+    // Check if there are any stats
+    if (stats.totalRounds === 0) {
+        modalBody.innerHTML = `
+            <div class="no-stats-message">
+                <h3>No Statistics Yet</h3>
+                <p>Play some rounds to start tracking your performance!</p>
+            </div>
+        `;
+        return;
+    }
+
+    const netProfitClass = stats.netProfit > 0 ? 'positive' : stats.netProfit < 0 ? 'negative' : 'neutral';
+    const streakText = stats.streakType === 'win' ? `${stats.currentStreak} Win Streak 🔥` :
+                       stats.streakType === 'loss' ? `${stats.currentStreak} Loss Streak` :
+                       'No Streak';
+
+    modalBody.innerHTML = `
+        <div class="stats-grid">
+            <!-- Overall Performance -->
+            <div class="stat-category">
+                <h3>📈 Overall Performance</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Total Rounds</span>
+                    <span class="stat-value">${stats.totalRounds}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Wins</span>
+                    <span class="stat-value positive">${stats.wins}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Losses</span>
+                    <span class="stat-value negative">${stats.losses}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Pushes</span>
+                    <span class="stat-value neutral">${stats.pushes}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value">${stats.winRate}%</span>
+                </div>
+            </div>
+
+            <!-- Special Outcomes -->
+            <div class="stat-category">
+                <h3>⭐ Special Outcomes</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Blackjacks</span>
+                    <span class="stat-value">${stats.blackjacks}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Busts</span>
+                    <span class="stat-value">${stats.busts}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Doubles</span>
+                    <span class="stat-value">${stats.doubles}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Splits</span>
+                    <span class="stat-value">${stats.splits}</span>
+                </div>
+            </div>
+
+            <!-- Money Stats -->
+            <div class="stat-category">
+                <h3>💰 Money</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Total Wagered</span>
+                    <span class="stat-value">$${stats.totalWagered}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Won</span>
+                    <span class="stat-value positive">$${stats.totalWon}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Total Lost</span>
+                    <span class="stat-value negative">$${stats.totalLost}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Net Profit</span>
+                    <span class="stat-value ${netProfitClass}">$${stats.netProfit >= 0 ? '+' : ''}${stats.netProfit}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Average Bet</span>
+                    <span class="stat-value">$${stats.avgBet}</span>
+                </div>
+            </div>
+
+            <!-- Streaks & Records -->
+            <div class="stat-category">
+                <h3>🏆 Records</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Current Streak</span>
+                    <span class="stat-value">${streakText}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Best Win Streak</span>
+                    <span class="stat-value positive">${stats.bestWinStreak}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Worst Loss Streak</span>
+                    <span class="stat-value negative">${stats.bestLossStreak}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Biggest Win</span>
+                    <span class="stat-value positive">$${stats.biggestWin}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Biggest Loss</span>
+                    <span class="stat-value negative">$${stats.biggestLoss}</span>
+                </div>
+            </div>
+
+            <!-- Side Bets & Insurance -->
+            <div class="stat-category">
+                <h3>🎲 Side Bets & Insurance</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Side Bets Played</span>
+                    <span class="stat-value">${stats.sideBetsPlayed}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Side Bets Won</span>
+                    <span class="stat-value">${stats.sideBetsWon}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Side Bet Win Rate</span>
+                    <span class="stat-value">${stats.sideBetWinRate}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Insurance Taken</span>
+                    <span class="stat-value">${stats.insuranceTaken}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Insurance Win Rate</span>
+                    <span class="stat-value">${stats.insuranceWinRate}%</span>
+                </div>
+            </div>
+        </div>
+
+        ${stats.recentRounds.length > 0 ? `
+            <div class="recent-rounds">
+                <h3>📜 Recent Rounds</h3>
+                <div class="round-history">
+                    ${stats.recentRounds.map(round => {
+                        const outcomeClass = round.outcome === 'win' || round.outcome === 'blackjack' ? 'win' :
+                                           round.outcome === 'push' ? 'push' : 'loss';
+                        const profitClass = round.profit > 0 ? 'positive' : round.profit < 0 ? 'negative' : 'neutral';
+                        const profitSign = round.profit > 0 ? '+' : '';
+
+                        return `
+                            <div class="round-item ${outcomeClass}">
+                                <div class="round-info">
+                                    <span class="round-number">Round ${round.round}</span>
+                                    <span class="round-outcome">${round.outcome}</span>
+                                </div>
+                                <span class="round-profit ${profitClass}">$${profitSign}${round.profit}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        ` : ''}
+    `;
+}
+
 // ==================== STARTUP ====================
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[App] DOM loaded, initializing...');
+
+    // Initialize stats system
+    gameStats.init();
+    console.log('[App] Stats system initialized');
+
+    // Initialize floating cards animation
+    initFloatingCards();
 
     // Initialize socket connection
     initSocket();
@@ -1711,11 +2671,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup join form
     setupJoinForm();
 
+    // Setup carousel
+    setupCarousel();
+
+    // Setup easter egg
+    setupEasterEgg();
+
     // Setup settings modal
     setupSettingsModal();
 
     // Setup results modal
     document.getElementById('closeResultsBtn')?.addEventListener('click', closeResultsModal);
+
+    // Setup betting modal
+    document.getElementById('closeBettingBtn')?.addEventListener('click', closeBettingOverlay);
+
+    // Close modals on ESC key (desktop)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const bettingModal = document.getElementById('bettingModal');
+            const rulesModal = document.getElementById('rulesModal');
+            const statsModal = document.getElementById('statsModal');
+
+            if (bettingModal && bettingModal.style.display === 'flex') {
+                closeBettingOverlay();
+            } else if (rulesModal && rulesModal.style.display === 'flex') {
+                closeRulesModal();
+            } else if (statsModal && statsModal.style.display === 'flex') {
+                closeStatsModal();
+            }
+        }
+    });
+
+    // Close betting modal on backdrop click (desktop)
+    document.getElementById('bettingModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'bettingModal') {
+            closeBettingOverlay();
+        }
+    });
+
+    // Setup rules modal
+    setupRulesModal();
+
+    // Setup stats modal
+    setupStatsModal();
 
     console.log('[App] Initialization complete');
 });

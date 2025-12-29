@@ -202,6 +202,73 @@ class GameRoom {
     this.transferHost(nextPlayer.id);
   }
 
+  /**
+   * Update player profile (name and color)
+   * @param {String} socketId - Socket ID
+   * @param {String} playerName - New player name
+   * @param {String} playerColor - Player color (hex)
+   * @returns {Object} {success, error}
+   */
+  updateProfile(socketId, playerName, playerColor) {
+    const player = this.players.get(socketId);
+    if (!player) {
+      return { success: false, error: 'Player not found' };
+    }
+
+    // Only allow updates in lobby phase
+    if (this.phase !== 'lobby') {
+      // Allow name/color changes during betting phase too
+      if (this.phase !== 'betting') {
+        return { success: false, error: 'Cannot update profile during active gameplay' };
+      }
+    }
+
+    // Update name if provided
+    if (playerName && playerName.trim()) {
+      let newName = playerName.trim();
+      if (newName.length > 20) {
+        newName = newName.substring(0, 20);
+      }
+
+      // Check for duplicate names and append suffix if needed
+      let finalName = newName;
+      let suffix = 2;
+      while (this.isNameTaken(finalName, socketId)) {
+        finalName = `${newName} (${suffix})`;
+        suffix++;
+      }
+
+      player.name = finalName;
+    }
+
+    // Update color if provided
+    if (playerColor) {
+      player.color = playerColor;
+    }
+
+    console.log(`[GameRoom] Profile updated for ${player.name}: ${player.color}`);
+
+    // Broadcast updated state
+    this.broadcastGameState();
+
+    return { success: true };
+  }
+
+  /**
+   * Check if a name is already taken by another player
+   * @param {String} name - Name to check
+   * @param {String} excludeId - Socket ID to exclude from check
+   * @returns {Boolean}
+   */
+  isNameTaken(name, excludeId) {
+    for (const [id, player] of this.players) {
+      if (id !== excludeId && player.name === name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // ==================== GAME FLOW ====================
 
   /**
@@ -366,16 +433,15 @@ class GameRoom {
   }
 
   /**
-   * Check if all players have made a decision (bet placed, ready, or eliminated)
+   * Check if all players have made a decision (bet placed AND ready, or eliminated)
    * @returns {Boolean}
    */
   allPlayersReady() {
     for (const player of this.players.values()) {
       // Player must be either:
-      // 1. Has placed a bet (currentBet > 0) - ready is optional
-      // 2. Ready (explicitly confirmed)
-      // 3. Eliminated (sat out/no money)
-      if (!player.eliminated && !player.ready && player.currentBet === 0) {
+      // 1. Eliminated/sitting out
+      // 2. Has placed a bet AND clicked ready
+      if (!player.eliminated && !player.ready) {
         return false;
       }
     }

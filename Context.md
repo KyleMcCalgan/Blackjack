@@ -1829,3 +1829,81 @@ $1, $2, $5, $10, $20, $50, $100, $200, $500, $1000
 **END OF SPECIFICATION**
 
 This document is now comprehensive, detailed, and ready to guide your entire development process. Save it, reference it often, and use it to keep your project on track. Happy coding! 🎰
+
+
+  1. Bet Presets & Quick Actions
+
+  - Add "Min Bet", "Max Bet", "Last Bet", "Clear All" buttons in the betting overlay
+  - Makes betting much faster, especially for repeat players
+
+  2. Keyboard Shortcuts
+
+  - H = Hit, S = Stand, D = Double Down, P = Split
+  - Enter = Ready/Confirm, Esc = Cancel/Close
+  - Space = Place Bet
+  - Show shortcuts in tooltips
+
+  3. Game Statistics Panel
+
+  - Track: Total rounds played, Wins/Losses/Pushes, Win rate
+  - Biggest win, Current streak, Total profit/loss
+  - Toggle button in header to show/hide stats
+
+  4. Sound Effects
+
+  - Card dealing sounds
+  - Chip placement clicks
+  - Win/lose chimes
+  - Mute button in header
+
+  5. Better Turn Indicators
+
+  - Pulse/glow effect on current player's seat
+  - Larger "YOUR TURN" banner
+  - Sound notification when it's your turn
+
+  6. Auto-Ready Toggle
+
+  - Setting to automatically mark ready after placing bet
+  - Saves one click every round
+
+  7. Confirmation Dialogs
+
+  - "Are you sure?" before sitting out
+  - Confirm large bet amounts
+  - Confirm before leaving game
+
+  8. Bet Memory
+
+  - "Repeat Last Bet" button
+  - Remembers your bet configuration from previous round
+  - Option to auto-fill same bet
+
+  9. Hand Value Always Visible
+
+  - Show hand total prominently on each player card area
+  - Soft/Hard indicator (e.g., "Soft 17" vs "17")
+
+  10. Quick Rebuy
+
+  - When eliminated, show "Rejoin with $1000" button
+  - No need to go through full join process
+
+  🎨 Polish Features:
+
+  11. Tooltips - Hover over buttons for descriptions
+  12. Win/Loss Streak Display - Show current streak in header
+  13. Table Theme Options - Choose table felt color
+  14. Countdown Animations - Visual timer with progress bar
+  15. Card Flip Animations - Smooth card reveal effects
+  16. Chip Animation - Chips fly to betting area
+  17. Copy Room Link - Share with friends (if applicable)
+  18. Recent History - Last 5-10 rounds results
+
+  Which of these sound most interesting to you? I'd recommend starting with:
+  1. Bet Presets (huge time saver)
+  2. Keyboard Shortcuts (for power users)
+  3. Game Stats (engagement and tracking)
+  4. Better Turn Indicators (clarity)
+
+  Want me to implement any of these?

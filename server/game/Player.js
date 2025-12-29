@@ -8,6 +8,7 @@ class Player {
     this.id = socketId;
     this.name = name;
     this.seat = seat;
+    this.color = '#FF5733'; // Default color
 
     // Status
     this.isHost = false;
@@ -554,6 +555,7 @@ class Player {
       id: this.id,
       name: this.name,
       seat: this.seat,
+      color: this.color,
       isHost: this.isHost,
       connected: this.connected,
       eliminated: this.eliminated,
