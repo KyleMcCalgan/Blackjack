@@ -470,8 +470,9 @@ class GameRoom {
 
     console.log(`[GameRoom] ${player.name} cancelled their bet`);
 
-    // Return bet to bankroll
-    player.bankroll += player.getTotalBets();
+    // NOTE: Bets are not deducted from bankroll until endBettingPhase(),
+    // so we should NOT add money back here. Just clear the bet.
+    // player.bankroll += player.getTotalBets(); // REMOVED - this was giving free money!
 
     // Clear bets and ready status
     player.clearBets();
@@ -567,8 +568,43 @@ class GameRoom {
     // Deduct bets from all players
     for (const player of this.players.values()) {
       if (!player.eliminated) {
-        player.deductAllBets();
-        player.initializeHand();
+        try {
+          const totalBets = player.getTotalBets();
+
+          // Validate player can afford their bet before deducting
+          if (totalBets > player.bankroll) {
+            console.log(`[GameRoom] WARNING: ${player.name} cannot afford bet ($${totalBets} > $${player.bankroll}). Auto-folding player.`);
+            player.eliminated = true;
+            player.clearBets();
+            player.clearHands();
+
+            // Notify clients about this player being auto-folded
+            this.io.emit('player-auto-folded', {
+              playerId: player.id,
+              playerName: player.name,
+              reason: 'insufficient_funds'
+            });
+            continue;
+          }
+
+          player.deductAllBets();
+          player.initializeHand();
+        } catch (error) {
+          // Catch any unexpected errors during bet deduction
+          console.log(`[GameRoom] ERROR: Failed to deduct bets for ${player.name}: ${error.message}`);
+          console.log(`[GameRoom] Player state - Bankroll: $${player.bankroll}, Bet: $${player.currentBet}, Side bets: ${JSON.stringify(player.sideBets)}`);
+
+          // Auto-fold player to prevent game from being stuck
+          player.eliminated = true;
+          player.clearBets();
+          player.clearHands();
+
+          this.io.emit('player-auto-folded', {
+            playerId: player.id,
+            playerName: player.name,
+            reason: 'bet_deduction_error'
+          });
+        }
       }
     }
 

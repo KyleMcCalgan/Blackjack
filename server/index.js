@@ -38,6 +38,10 @@ app.get('/host', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/host.html'));
 });
 
+app.get('/dev', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dev.html'));
+});
+
 // Default game configuration
 let gameConfig = {
   startingBankroll: 1000,
@@ -60,6 +64,45 @@ let adminCommands = new AdminCommands(gameRoom, statistics, testMode);
 gameRoom.testMode = testMode;
 
 console.log('[Server] Game systems initialized');
+
+// ==================== LOG STREAMING FOR ADMIN PANEL ====================
+
+// Store original console methods
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+// Wrap console.log to broadcast to admin panel
+console.log = function(...args) {
+  originalConsoleLog.apply(console, args);
+
+  // Broadcast to admin clients
+  const message = args.map(arg =>
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ');
+
+  io.emit('admin-log', { message, type: 'normal' });
+};
+
+console.error = function(...args) {
+  originalConsoleError.apply(console, args);
+
+  const message = args.map(arg =>
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ');
+
+  io.emit('admin-log', { message, type: 'error' });
+};
+
+console.warn = function(...args) {
+  originalConsoleWarn.apply(console, args);
+
+  const message = args.map(arg =>
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ');
+
+  io.emit('admin-log', { message, type: 'warning' });
+};
 
 // ==================== SOCKET.IO EVENT HANDLERS ====================
 
@@ -273,6 +316,64 @@ io.on('connection', (socket) => {
 
   socket.on('error', (error) => {
     console.error(`[Socket Error] ${socket.id}:`, error);
+  });
+
+  // ===== ADMIN PANEL =====
+
+  socket.on('admin-validate-key', (data) => {
+    const { key } = data;
+    const correctKey = process.env.DEV_PANEL_KEY || 'dev123';
+
+    if (key === correctKey) {
+      socket.emit('admin-key-validated', { valid: true });
+      console.log(`[Admin] Dev panel access granted to ${socket.id}`);
+    } else {
+      socket.emit('admin-key-validated', { valid: false });
+      console.log(`[Admin] Dev panel access denied to ${socket.id} - invalid key`);
+    }
+  });
+
+  socket.on('admin-command', (data) => {
+    const { command } = data;
+    console.log(`[Admin] Executing command: ${command}`);
+
+    try {
+      const output = adminCommands.execute(command);
+      socket.emit('admin-command-output', { output });
+
+      // Broadcast command execution to all admin clients
+      io.emit('admin-log', {
+        message: `Command executed: ${command}`,
+        type: 'success'
+      });
+    } catch (error) {
+      socket.emit('admin-command-output', {
+        output: `Error: ${error.message}`
+      });
+      io.emit('admin-log', {
+        message: `Command failed: ${command} - ${error.message}`,
+        type: 'error'
+      });
+    }
+  });
+
+  socket.on('admin-get-info', () => {
+    socket.emit('admin-info', {
+      state: {
+        sessionId: gameRoom.sessionId,
+        phase: gameRoom.phase,
+        roundNumber: gameRoom.roundNumber,
+        players: Array.from(gameRoom.players.values()).map(p => p.toJSON()),
+        config: gameRoom.config
+      },
+      ngrokUrl: adminCommands.ngrokUrl
+    });
+  });
+
+  socket.on('admin-get-players', () => {
+    socket.emit('admin-players', {
+      players: Array.from(gameRoom.players.values()).map(p => p.toJSON())
+    });
   });
 });
 

@@ -339,6 +339,8 @@ function initSocket() {
     gameState.socket.on('game-state', handleGameState);
     gameState.socket.on('player-joined', handlePlayerJoined);
     gameState.socket.on('player-left', handlePlayerLeft);
+    gameState.socket.on('host-transferred', handleHostTransferred);
+    gameState.socket.on('player-auto-folded', handlePlayerAutoFolded);
 
     // Betting events
     gameState.socket.on('bet-placed', handleBetPlaced);
@@ -690,12 +692,16 @@ function setupCarousel() {
 function handleJoinSuccess(data) {
     console.log('[App] Join successful:', data);
     console.log('[App] Setting isHost to:', data.player.isHost);
+    console.log('[App] Player ID from join-success:', data.player.id);
+    console.log('[App] Current socket ID:', gameState.socket.id);
 
+    gameState.playerId = data.player.id; // Ensure we use the server's player ID
     gameState.playerName = data.player.name;
     gameState.playerSeat = data.seat;
     gameState.isHost = data.player.isHost;
 
     console.log('[App] gameState.isHost is now:', gameState.isHost);
+    console.log('[App] gameState.playerId set to:', gameState.playerId);
 
     // Hide join screen, show game UI
     document.getElementById('joinScreen').style.display = 'none';
@@ -749,6 +755,8 @@ function handleJoinFailed(data) {
 
 function handleGameState(state) {
     console.log('[App] Game state update:', state);
+    console.log('[App] gameState.playerId:', gameState.playerId);
+    console.log('[App] state.players:', state.players.map(p => ({ id: p.id, name: p.name })));
 
     // Clear saved bets when leaving betting phase
     if (gameState.phase === 'betting' && state.phase !== 'betting') {
@@ -761,6 +769,49 @@ function handleGameState(state) {
     gameState.roundNumber = state.roundNumber;
     gameState.players = state.players;
     gameState.config = state.config;
+
+    // Check if current player is still in the game
+    const currentPlayer = state.players.find(p => p.id === gameState.playerId);
+    console.log('[App] currentPlayer found:', currentPlayer ? currentPlayer.name : 'NOT FOUND');
+
+    if (!currentPlayer && gameState.playerId) {
+        // Player was kicked or removed from the game
+        console.log('[App] Player was removed from the game');
+        showNotification('You have been removed from the game', 'error');
+
+        // Reset game state
+        gameState.playerId = null;
+        gameState.playerName = null;
+        gameState.playerSeat = null;
+        gameState.isHost = false;
+
+        // Return to join screen
+        document.getElementById('gameUI').style.display = 'none';
+        document.getElementById('joinScreen').style.display = 'flex';
+
+        return; // Don't continue with UI updates
+    }
+
+    // Update isHost status from server data if player exists
+    if (currentPlayer) {
+        const wasHost = gameState.isHost;
+        gameState.isHost = currentPlayer.isHost;
+
+        // Update host crown in display
+        document.getElementById('playerNameDisplay').textContent = currentPlayer.name + (currentPlayer.isHost ? ' 👑' : '');
+
+        // Show/hide host settings button
+        const hostSettingsBtn = document.getElementById('hostSettingsBtn');
+        if (hostSettingsBtn) {
+            hostSettingsBtn.style.display = currentPlayer.isHost ? 'block' : 'none';
+        }
+
+        // If host status changed, update controls
+        if (wasHost !== currentPlayer.isHost) {
+            console.log('[App] Host status changed - was:', wasHost, 'now:', currentPlayer.isHost);
+            // Controls will be updated below in updateControlsArea
+        }
+    }
 
     // Stop timer for phases that don't have timers
     if (!['betting', 'insurance', 'playing'].includes(state.phase)) {
@@ -790,7 +841,6 @@ function handleGameState(state) {
     });
 
     // Update current player's bankroll
-    const currentPlayer = state.players.find(p => p.id === gameState.playerId);
     if (currentPlayer) {
         document.getElementById('playerBankroll').textContent = '$' + currentPlayer.bankroll;
 
@@ -815,12 +865,85 @@ function handleGameState(state) {
 
 function handlePlayerJoined(data) {
     console.log('[App] Player joined:', data.playerName);
+    showNotification(`${data.playerName} joined the game`, 'success');
     // Game state update will handle UI refresh
 }
 
 function handlePlayerLeft(data) {
     console.log('[App] Player left:', data.playerId);
-    // Game state update will handle UI refresh
+
+    // Check if the player who left is the current user
+    if (data.playerId === gameState.playerId) {
+        console.log('[App] Current user was kicked from the game');
+        showNotification('You have been kicked from the game', 'error');
+
+        // Reset game state
+        gameState.playerId = null;
+        gameState.playerName = null;
+        gameState.playerSeat = null;
+        gameState.isHost = false;
+
+        // Return to join screen
+        document.getElementById('gameUI').style.display = 'none';
+        document.getElementById('joinScreen').style.display = 'flex';
+    }
+
+    // Game state update will handle UI refresh for other players
+}
+
+function handleHostTransferred(data) {
+    console.log('[App] Host transferred to:', data.newHostName);
+
+    // Check if the new host is the current user
+    if (data.newHostId === gameState.playerId) {
+        showNotification('You are now the host!', 'success');
+        gameState.isHost = true;
+
+        // Update host crown in display
+        const currentPlayerName = gameState.playerName || '';
+        document.getElementById('playerNameDisplay').textContent = currentPlayerName + ' 👑';
+
+        // Show host settings button
+        const hostSettingsBtn = document.getElementById('hostSettingsBtn');
+        if (hostSettingsBtn) {
+            hostSettingsBtn.style.display = 'block';
+        }
+    } else {
+        showNotification(`${data.newHostName} is now the host`, 'info');
+
+        // Remove host status if we had it
+        if (gameState.isHost) {
+            gameState.isHost = false;
+
+            // Update display (remove crown)
+            const currentPlayerName = gameState.playerName || '';
+            document.getElementById('playerNameDisplay').textContent = currentPlayerName;
+
+            // Hide host settings button
+            const hostSettingsBtn = document.getElementById('hostSettingsBtn');
+            if (hostSettingsBtn) {
+                hostSettingsBtn.style.display = 'none';
+            }
+        }
+    }
+
+    // Game state update will handle the rest of the UI refresh
+}
+
+function handlePlayerAutoFolded(data) {
+    console.log('[App] Player auto-folded:', data.playerName, 'reason:', data.reason);
+
+    // Check if it's the current player
+    if (data.playerId === gameState.playerId) {
+        if (data.reason === 'insufficient_funds') {
+            showNotification('You were auto-folded: Insufficient funds for bet', 'warning');
+        } else if (data.reason === 'bet_deduction_error') {
+            showNotification('You were auto-folded: Error processing bet', 'error');
+        }
+    } else {
+        // Notify about other players being auto-folded
+        showNotification(`${data.playerName} was auto-folded`, 'info');
+    }
 }
 
 function handleBetPlaced(data) {

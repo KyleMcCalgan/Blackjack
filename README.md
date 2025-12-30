@@ -57,11 +57,15 @@ Ngrok creates a secure tunnel to your local server, allowing friends to connect 
    Copy-Item .env.example .env
    ```
 
-2. Open `.env` in a text editor (Notepad, VS Code, etc.) and replace the placeholder with your ngrok authtoken:
-   ```
+2. Open `.env` in a text editor (Notepad, VS Code, etc.) and configure:
+   ```env
+   # Ngrok Configuration
    NGROK_AUTHTOKEN=your_actual_ngrok_authtoken_here
+
+   # Dev Admin Panel (change this to your own secure key!)
+   DEV_PANEL_KEY=dev123
    ```
-   **Note**: Don't use quotes around the token
+   **Note**: Don't use quotes around values
 
 #### Step 3: Start the Server
 
@@ -109,15 +113,41 @@ The server will start and display:
 - Double down on any two cards
 - Insurance available when dealer shows Ace
 
+## Dev Admin Panel
+
+Access the web-based admin panel for remote server control and testing:
+
+```
+http://localhost:3000/dev?key=your_dev_key
+https://your-ngrok-url.ngrok.io/dev?key=your_dev_key
+```
+
+**Features:**
+- 🎮 Execute server commands from any device (including your phone!)
+- 📜 Live server log streaming
+- 🧪 Test mode with pre-dealt cards and scenarios
+- 👥 Manage players (kick, transfer host)
+- 📊 Real-time game state monitoring
+
+**Setup:** Set your access key in `.env`:
+```env
+DEV_PANEL_KEY=your_secret_key_here
+```
+
+**Full documentation:** See [DEV_PANEL.md](DEV_PANEL.md) for complete guide.
+
 ## Admin Commands
 
-Type these in the server console:
+Type these in the server console (or use the Dev Panel):
 
 ```
 /stats              - View session statistics
 /export             - Export stats to JSON
 /test-mode on       - Enable test mode with pre-dealt cards
+/deal AS KH 10D     - Set specific cards to be dealt
+/scenario blackjack - Load preset testing scenario
 /kick [player]      - Remove a player
+/next               - Manually advance to next phase
 /help               - List all commands
 ```
 
