@@ -346,34 +346,86 @@ class TestMode {
    * @returns {Object} {success, message}
    */
   setScenario(scenario) {
+    // Card dealing order for 1 player:
+    // Card 1: Player first card
+    // Card 2: Dealer upcard (face up)
+    // Card 3: Player second card
+    // Card 4: Dealer hole card (face down)
+    // Card 5+: Hit cards, etc.
     const scenarios = {
       'blackjack': {
-        description: 'Player gets blackjack, dealer gets 20',
-        cards: ['AS', 'KH', '10D', 'KD', '10H', '9H']
-      },
-      'bust': {
-        description: 'Player busts, dealer stands on 17',
-        cards: ['10H', '7D', '8S', 'AH', '6D', '10S']
-      },
-      'split-aces': {
-        description: 'Player gets pair of aces',
-        cards: ['AS', 'AH', '7D', '10H', 'KH', 'QD']
-      },
-      'split-tens': {
-        description: 'Player gets pair of tens',
-        cards: ['10H', '10D', '7S', 'KH', 'QD', '9H']
-      },
-      'dealer-bust': {
-        description: 'Dealer busts with many cards (for Bust It)',
-        cards: ['10H', '9D', 'AH', '5D', '4H', '3S', '10S']
-      },
-      'perfect-pair': {
-        description: 'Player gets perfect pair (same suit)',
-        cards: ['KH', 'KH', '7D', '10S', 'AH', '6D']
+        description: 'Player gets blackjack (A♠ K♥), dealer gets 19 (10♦ 9♥)',
+        cards: ['AS', '10D', 'KH', '9H']
       },
       'dealer-blackjack': {
-        description: 'Dealer gets blackjack (for insurance)',
-        cards: ['7H', '8D', 'AH', 'KS', '10H', '9D']
+        description: 'Dealer gets blackjack (A♥ K♠), player gets 15 (7♥ 8♦) - Insurance test',
+        cards: ['7H', 'AH', '8D', 'KS']
+      },
+      'bust': {
+        description: 'Player busts (10♥ 7♦ + 8♠ = 25), dealer has A♥ 6♦',
+        cards: ['10H', 'AH', '7D', '6D', '8S']
+      },
+      'colored-pair': {
+        description: 'Player gets colored pair (6♥ 6♦ both red) - 12:1 payout',
+        cards: ['6H', '7D', '6D', '10S']
+      },
+      'perfect-pair': {
+        description: 'Player gets perfect pair (K♥ K♥ same suit) - 25:1 payout',
+        cards: ['KH', '7D', 'KH', '10S']
+      },
+      // Bust It scenarios
+      'bust-it-3cards': {
+        description: 'Dealer busts with 3 cards (5♦ 10♦ 10♠ = 25) - Bust It 2:1',
+        cards: ['10H', '5D', '9H', '10D', '10S']
+      },
+      'bust-it-4cards': {
+        description: 'Dealer busts with 4 cards (5♦ 5♥ 5♠ 7♠ = 22) - Bust It 4:1',
+        cards: ['10H', '5D', '9H', '5H', '5S', '7S']
+      },
+      'bust-it-5cards': {
+        description: 'Dealer busts with 5 cards (2♦ 3♥ 4♠ 5♠ 8♠ = 22) - Bust It 15:1',
+        cards: ['10H', '2D', '9H', '3H', '4S', '5S', '8S']
+      },
+      'bust-it-6cards': {
+        description: 'Dealer busts with 6 cards (2♦ 2♥ 3♠ 4♠ 5♠ 10♠ = 26) - Bust It 50:1',
+        cards: ['10H', '2D', '9H', '2H', '3S', '4S', '5S', '10S']
+      },
+      'bust-it-7cards': {
+        description: 'Dealer busts with 7 cards (2♦ 2♥ 2♠ 2♣ 3♠ 4♠ 10♠ = 25) - Bust It 100:1',
+        cards: ['10H', '2D', '9H', '2H', '2S', '2C', '3S', '4S', '10S']
+      },
+      'bust-it-8cards': {
+        description: 'Dealer busts with 8 cards (A♦ A♥ 2♠ 2♦ 3♠ 4♠ A♠ 10♠ = 24) - Bust It 250:1',
+        cards: ['10H', 'AD', '9H', 'AH', '2S', '2D', '3S', '4S', 'AS', '10S']
+      },
+      // 21+3 scenarios
+      '21plus3-flush': {
+        description: 'Player 5♥ 7♥ + Dealer 9♥ = Flush (all hearts) - 21+3 5:1',
+        cards: ['5H', '9H', '7H', '10D']
+      },
+      '21plus3-straight': {
+        description: 'Player 5♥ 7♠ + Dealer 6♦ = Straight (5-6-7) - 21+3 10:1',
+        cards: ['5H', '6D', '7S', '10H']
+      },
+      '21plus3-three-kind': {
+        description: 'Player 8♥ 8♠ + Dealer 8♦ = Three of a Kind - 21+3 30:1',
+        cards: ['8H', '8D', '8S', '10H']
+      },
+      '21plus3-straight-flush': {
+        description: 'Player 5♥ 7♥ + Dealer 6♥ = Straight Flush (5-6-7 hearts) - 21+3 40:1',
+        cards: ['5H', '6H', '7H', '10D']
+      },
+      '21plus3-suited-three': {
+        description: 'Player K♥ K♥ + Dealer K♥ = Suited Three of a Kind - 21+3 100:1',
+        cards: ['KH', 'KH', 'KH', '10D']
+      },
+      'split-aces': {
+        description: 'Player gets pair of aces (A♠ A♥)',
+        cards: ['AS', '7D', 'AH', '10H', 'KH', 'QD']
+      },
+      'split-tens': {
+        description: 'Player gets pair of tens (10♥ 10♦)',
+        cards: ['10H', '7S', '10D', 'KH', 'QD', '9H']
       }
     };
 
@@ -399,13 +451,29 @@ class TestMode {
    */
   getScenarios() {
     return [
-      { name: 'blackjack', description: 'Player gets blackjack' },
+      // Basic scenarios
+      { name: 'blackjack', description: 'Player gets blackjack (A♠ K♥)' },
+      { name: 'dealer-blackjack', description: 'Dealer gets blackjack - Insurance test' },
       { name: 'bust', description: 'Player busts' },
+      // Perfect Pairs
+      { name: 'colored-pair', description: 'Colored Pair (12:1)' },
+      { name: 'perfect-pair', description: 'Perfect Pair (25:1)' },
+      // Bust It
+      { name: 'bust-it-3cards', description: 'Bust It - 3 Cards (2:1)' },
+      { name: 'bust-it-4cards', description: 'Bust It - 4 Cards (4:1)' },
+      { name: 'bust-it-5cards', description: 'Bust It - 5 Cards (15:1)' },
+      { name: 'bust-it-6cards', description: 'Bust It - 6 Cards (50:1)' },
+      { name: 'bust-it-7cards', description: 'Bust It - 7 Cards (100:1)' },
+      { name: 'bust-it-8cards', description: 'Bust It - 8+ Cards (250:1)' },
+      // 21+3
+      { name: '21plus3-flush', description: '21+3 - Flush (5:1)' },
+      { name: '21plus3-straight', description: '21+3 - Straight (10:1)' },
+      { name: '21plus3-three-kind', description: '21+3 - Three of a Kind (30:1)' },
+      { name: '21plus3-straight-flush', description: '21+3 - Straight Flush (40:1)' },
+      { name: '21plus3-suited-three', description: '21+3 - Suited Three of a Kind (100:1)' },
+      // Splits
       { name: 'split-aces', description: 'Player gets pair of aces' },
-      { name: 'split-tens', description: 'Player gets pair of tens' },
-      { name: 'dealer-bust', description: 'Dealer busts with many cards' },
-      { name: 'perfect-pair', description: 'Player gets perfect pair' },
-      { name: 'dealer-blackjack', description: 'Dealer gets blackjack' }
+      { name: 'split-tens', description: 'Player gets pair of tens' }
     ];
   }
 }

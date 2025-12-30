@@ -670,6 +670,14 @@ class GameRoom {
       });
     }
 
+    // Store original first 2 cards for each player (for Perfect Pairs evaluation)
+    for (const player of activePlayers) {
+      if (player.hands[0] && player.hands[0].cards.length === 2) {
+        player.originalCards = [...player.hands[0].cards]; // Copy the cards
+        console.log(`[GameRoom] Stored original cards for ${player.name}:`, player.originalCards);
+      }
+    }
+
     // Second card to dealer (face down)
     const dealerCard2 = this.deck.draw();
     this.dealer.addCard(dealerCard2, false);
@@ -1205,8 +1213,8 @@ class GameRoom {
 
         playerResults.totalWinnings += payout;
 
-        // Record result
-        player.recordHandResult(result, payout);
+        // Record result (pass hand.bet for accurate loss tracking)
+        player.recordHandResult(result, payout, hand.bet);
       }
 
       // Add insurance info if player took insurance
@@ -1233,51 +1241,60 @@ class GameRoom {
 
       // Evaluate side bets
       if (player.sideBets.perfectPairs > 0) {
-        const perfectPairsPayout = SideBets.evaluatePerfectPairs(player.hands[0].cards, player.sideBets.perfectPairs);
+        console.log(`[GameRoom] Evaluating Perfect Pairs for ${player.name}. Bet: $${player.sideBets.perfectPairs}. Original Cards:`, player.originalCards);
+        const result = SideBets.evaluatePerfectPairs(player.originalCards, player.sideBets.perfectPairs);
+        console.log(`[GameRoom] Perfect Pairs result for ${player.name}:`, result);
+
         playerResults.sideBets.perfectPairs = {
           bet: player.sideBets.perfectPairs,
-          payout: perfectPairsPayout,
-          won: perfectPairsPayout > 0
+          payout: result.payout,
+          won: result.payout > 0,
+          handType: result.handType || null,
+          multiplier: result.multiplier || null
         };
-        playerResults.totalWinnings += perfectPairsPayout;
+        playerResults.totalWinnings += result.payout;
 
         // Record side bet statistics
         if (this.statistics) {
-          this.statistics.recordSideBet('perfectPairs', player.sideBets.perfectPairs, perfectPairsPayout);
+          this.statistics.recordSideBet('perfectPairs', player.sideBets.perfectPairs, result.payout);
         }
       }
 
       if (player.sideBets.bustIt > 0) {
-        const bustItPayout = SideBets.evaluateBustIt(this.dealer.hand, player.sideBets.bustIt);
+        const result = SideBets.evaluateBustIt(this.dealer.hand, player.sideBets.bustIt);
         playerResults.sideBets.bustIt = {
           bet: player.sideBets.bustIt,
-          payout: bustItPayout,
-          won: bustItPayout > 0
+          payout: result.payout,
+          won: result.payout > 0,
+          handType: result.handType || null,
+          multiplier: result.multiplier || null
         };
-        playerResults.totalWinnings += bustItPayout;
+        playerResults.totalWinnings += result.payout;
 
         // Record side bet statistics
         if (this.statistics) {
-          this.statistics.recordSideBet('bustIt', player.sideBets.bustIt, bustItPayout);
+          this.statistics.recordSideBet('bustIt', player.sideBets.bustIt, result.payout);
         }
       }
 
       if (player.sideBets.twentyOnePlus3 > 0) {
-        const twentyOnePlus3Payout = SideBets.evaluate21Plus3(
-          player.hands[0].cards,
+        const result = SideBets.evaluate21Plus3(
+          player.originalCards,
           this.dealer.upCard,
           player.sideBets.twentyOnePlus3
         );
         playerResults.sideBets.twentyOnePlus3 = {
           bet: player.sideBets.twentyOnePlus3,
-          payout: twentyOnePlus3Payout,
-          won: twentyOnePlus3Payout > 0
+          payout: result.payout,
+          won: result.payout > 0,
+          handType: result.handType || null,
+          multiplier: result.multiplier || null
         };
-        playerResults.totalWinnings += twentyOnePlus3Payout;
+        playerResults.totalWinnings += result.payout;
 
         // Record side bet statistics
         if (this.statistics) {
-          this.statistics.recordSideBet('twentyOnePlus3', player.sideBets.twentyOnePlus3, twentyOnePlus3Payout);
+          this.statistics.recordSideBet('twentyOnePlus3', player.sideBets.twentyOnePlus3, result.payout);
         }
       }
 

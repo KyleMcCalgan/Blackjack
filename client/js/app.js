@@ -25,20 +25,15 @@ const gameState = {
 // ==================== STATS TRACKING SYSTEM ====================
 
 const gameStats = {
-    // Initialize or load stats from localStorage
+    // Initialize stats (fresh every session, no localStorage persistence)
     init() {
-        const saved = localStorage.getItem('blackjackStats');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                Object.assign(this, data);
-            } catch (e) {
-                console.error('[Stats] Failed to load stats:', e);
-                this.reset();
-            }
-        } else {
-            this.reset();
+        // Clear any old cached stats from localStorage
+        try {
+            localStorage.removeItem('blackjackStats');
+        } catch (e) {
+            // Ignore errors
         }
+        this.reset();
     },
 
     // Reset all stats
@@ -65,40 +60,13 @@ const gameStats = {
         this.splits = 0;
         this.insuranceTaken = 0;
         this.insuranceWon = 0;
-        this.save();
+        // Note: No longer saving to localStorage - stats are session-only
     },
 
-    // Save to localStorage
+    // Save is now a no-op (stats are not persisted)
     save() {
-        try {
-            const data = {
-                totalRounds: this.totalRounds,
-                wins: this.wins,
-                losses: this.losses,
-                pushes: this.pushes,
-                blackjacks: this.blackjacks,
-                busts: this.busts,
-                totalWagered: this.totalWagered,
-                totalWon: this.totalWon,
-                totalLost: this.totalLost,
-                biggestWin: this.biggestWin,
-                biggestLoss: this.biggestLoss,
-                currentStreak: this.currentStreak,
-                streakType: this.streakType,
-                bestWinStreak: this.bestWinStreak,
-                bestLossStreak: this.bestLossStreak,
-                recentRounds: this.recentRounds,
-                sideBetsPlayed: this.sideBetsPlayed,
-                sideBetsWon: this.sideBetsWon,
-                doubles: this.doubles,
-                splits: this.splits,
-                insuranceTaken: this.insuranceTaken,
-                insuranceWon: this.insuranceWon
-            };
-            localStorage.setItem('blackjackStats', JSON.stringify(data));
-        } catch (e) {
-            console.error('[Stats] Failed to save stats:', e);
-        }
+        // Stats are no longer saved to localStorage
+        // They reset on every page refresh/server restart
     },
 
     // Record a round result
@@ -2415,9 +2383,10 @@ function showResultsModal(myResults, roundData) {
 
         if (myResults.sideBets.perfectPairs) {
             const sb = myResults.sideBets.perfectPairs;
+            const typeLabel = sb.won && sb.handType ? ` - ${sb.handType} (${sb.multiplier}:1)` : '';
             html += `
                 <div class="result-item ${sb.won ? 'win' : 'loss'}">
-                    <div class="result-label">Perfect Pairs ${sb.won ? '✓' : '✗'}</div>
+                    <div class="result-label">Perfect Pairs${typeLabel} ${sb.won ? '✓' : '✗'}</div>
                     <div class="result-details">
                         <span>Bet: $${sb.bet}</span>
                         <span class="result-payout">Payout: $${sb.payout}</span>
@@ -2428,9 +2397,10 @@ function showResultsModal(myResults, roundData) {
 
         if (myResults.sideBets.bustIt) {
             const sb = myResults.sideBets.bustIt;
+            const typeLabel = sb.won && sb.handType ? ` - ${sb.handType} (${sb.multiplier}:1)` : '';
             html += `
                 <div class="result-item ${sb.won ? 'win' : 'loss'}">
-                    <div class="result-label">Bust It ${sb.won ? '✓' : '✗'}</div>
+                    <div class="result-label">Bust It${typeLabel} ${sb.won ? '✓' : '✗'}</div>
                     <div class="result-details">
                         <span>Bet: $${sb.bet}</span>
                         <span class="result-payout">Payout: $${sb.payout}</span>
@@ -2441,9 +2411,10 @@ function showResultsModal(myResults, roundData) {
 
         if (myResults.sideBets.twentyOnePlus3) {
             const sb = myResults.sideBets.twentyOnePlus3;
+            const typeLabel = sb.won && sb.handType ? ` - ${sb.handType} (${sb.multiplier}:1)` : '';
             html += `
                 <div class="result-item ${sb.won ? 'win' : 'loss'}">
-                    <div class="result-label">21+3 ${sb.won ? '✓' : '✗'}</div>
+                    <div class="result-label">21+3${typeLabel} ${sb.won ? '✓' : '✗'}</div>
                     <div class="result-details">
                         <span>Bet: $${sb.bet}</span>
                         <span class="result-payout">Payout: $${sb.payout}</span>

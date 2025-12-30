@@ -31,6 +31,9 @@ class Player {
     // Each hand: {cards: [], bet: 0, status: 'active'|'stand'|'bust'|'blackjack', isDoubled: false, fromSplit: false, hasActed: false}
     this.hands = [];
 
+    // Store original first 2 cards (for side bet evaluation before splits)
+    this.originalCards = [];
+
     // Statistics tracking
     this.statistics = {
       handsPlayed: 0,
@@ -383,15 +386,7 @@ class Player {
    */
   addWinnings(amount) {
     this.bankroll += amount;
-
-    // Track statistics
-    const profit = amount - this.currentBet;
-    this.statistics.netProfit += profit;
-
-    if (profit > this.statistics.biggestWin) {
-      this.statistics.biggestWin = profit;
-    }
-
+    // Note: Net profit tracking happens in recordHandResult, not here
     return this.bankroll;
   }
 
@@ -439,27 +434,41 @@ class Player {
   /**
    * Record result of a hand
    * @param {String} result - 'win' | 'loss' | 'push' | 'blackjack'
-   * @param {Number} winnings - Amount won (0 if loss)
+   * @param {Number} payout - Amount paid out (includes original bet for win/push, 0 for loss)
+   * @param {Number} betAmount - The bet amount for this hand (optional, defaults to currentBet)
    */
-  recordHandResult(result, winnings = 0) {
+  recordHandResult(result, payout = 0, betAmount = null) {
     this.statistics.handsPlayed++;
+
+    const bet = betAmount !== null ? betAmount : this.currentBet;
 
     switch (result) {
       case 'win':
       case 'blackjack':
         this.statistics.handsWon++;
+        // Calculate profit: payout includes original bet, so profit = payout - bet
+        const profit = payout - bet;
+        this.statistics.netProfit += profit;
+
+        if (profit > this.statistics.biggestWin) {
+          this.statistics.biggestWin = profit;
+        }
         break;
 
       case 'loss':
         this.statistics.handsLost++;
-        const loss = this.currentBet;
-        if (loss > this.statistics.biggestLoss) {
-          this.statistics.biggestLoss = loss;
+        // Lost the entire bet
+        this.statistics.netProfit -= bet;
+
+        if (bet > this.statistics.biggestLoss) {
+          this.statistics.biggestLoss = bet;
         }
         break;
 
       case 'push':
         this.statistics.handsPushed++;
+        // Push: got bet back, net profit is 0
+        // No change to netProfit
         break;
     }
   }
@@ -535,6 +544,7 @@ class Player {
     this.ready = false;
     this.clearBets();
     this.clearHands();
+    this.originalCards = []; // Clear original cards for new round
 
     // Check if bankrupt
     if (this.isBankrupt()) {

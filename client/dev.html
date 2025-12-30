@@ -99,6 +99,28 @@
       transform: scale(0.95);
     }
 
+    select {
+      background: #001100;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #00ff00;
+      box-shadow: 0 0 10px #00ff0050;
+    }
+
+    select option {
+      background: #001100;
+      color: #00ff00;
+    }
+
     .input-group {
       margin-bottom: 15px;
     }
@@ -328,12 +350,47 @@
             <button onclick="executeCommand('/debug')">Toggle Debug</button>
             <button onclick="executeCommand('/state')">View State</button>
             <button onclick="executeCommand('/scenario')">List Scenarios</button>
+            <button onclick="executeCommand('/deal clear')">Clear Cards</button>
           </div>
 
           <div class="input-group">
             <label>Deal Cards (e.g., AS KH 10D):</label>
             <input type="text" id="dealCards" placeholder="AS KH 10D 7C" />
-            <button onclick="executeDeal()" style="margin-top: 10px;">Deal Cards</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <select id="scenarioSelect" style="flex: 1;">
+                <option value="">-- Select Scenario --</option>
+                <optgroup label="Blackjack">
+                  <option value="blackjack">Player Blackjack</option>
+                  <option value="dealer-blackjack">Dealer Blackjack (Insurance)</option>
+                  <option value="bust">Player Bust</option>
+                </optgroup>
+                <optgroup label="Perfect Pairs">
+                  <option value="colored-pair">Colored Pair (12:1)</option>
+                  <option value="perfect-pair">Perfect Pair (25:1)</option>
+                </optgroup>
+                <optgroup label="Bust It">
+                  <option value="bust-it-3cards">Bust It - 3 Cards (2:1)</option>
+                  <option value="bust-it-4cards">Bust It - 4 Cards (4:1)</option>
+                  <option value="bust-it-5cards">Bust It - 5 Cards (15:1)</option>
+                  <option value="bust-it-6cards">Bust It - 6 Cards (50:1)</option>
+                  <option value="bust-it-7cards">Bust It - 7 Cards (100:1)</option>
+                  <option value="bust-it-8cards">Bust It - 8+ Cards (250:1)</option>
+                </optgroup>
+                <optgroup label="21+3">
+                  <option value="21plus3-flush">21+3 - Flush (5:1)</option>
+                  <option value="21plus3-straight">21+3 - Straight (10:1)</option>
+                  <option value="21plus3-three-kind">21+3 - Three of a Kind (30:1)</option>
+                  <option value="21plus3-straight-flush">21+3 - Straight Flush (40:1)</option>
+                  <option value="21plus3-suited-three">21+3 - Suited Three of a Kind (100:1)</option>
+                </optgroup>
+                <optgroup label="Splits">
+                  <option value="split-aces">Split Aces</option>
+                  <option value="split-tens">Split Tens</option>
+                </optgroup>
+              </select>
+              <button onclick="loadSelectedScenario()" style="min-width: 100px;">Load</button>
+            </div>
+            <button onclick="executeDeal()" style="margin-top: 10px; width: 100%;">Deal Cards</button>
           </div>
         </div>
 
@@ -485,6 +542,112 @@
       const cards = document.getElementById('dealCards').value.trim();
       if (cards) {
         executeCommand(`/deal ${cards}`);
+      }
+    }
+
+    function loadSelectedScenario() {
+      const select = document.getElementById('scenarioSelect');
+      const scenarioName = select.value;
+
+      if (!scenarioName) {
+        addLog('[Scenario] Please select a scenario first', 'error');
+        return;
+      }
+
+      // Correct card dealing order for 1 player:
+      // Card 1: Player first card
+      // Card 2: Dealer upcard (face up)
+      // Card 3: Player second card
+      // Card 4: Dealer hole card (face down)
+      // Card 5+: Hit cards, etc.
+      const scenarios = {
+        'blackjack': {
+          cards: 'AS 10D KH 9H',
+          desc: 'Player: A♠ K♥ (Blackjack), Dealer: 10♦ 9♥ (19)'
+        },
+        'dealer-blackjack': {
+          cards: '7H AH 8D KS',
+          desc: 'Player: 7♥ 8♦ (15), Dealer: A♥ K♠ (Blackjack - Insurance test)'
+        },
+        'bust': {
+          cards: '10H AH 7D 6D 8S',
+          desc: 'Player: 10♥ 7♦ then hits 8♠ (Bust 25), Dealer: A♥ 6♦'
+        },
+        'colored-pair': {
+          cards: '6H 7D 6D 10S',
+          desc: 'Player: 6♥ 6♦ (Colored Pair 12:1 - both red), Dealer: 7♦ 10♠'
+        },
+        'perfect-pair': {
+          cards: 'KH 7D KH 10S',
+          desc: 'Player: K♥ K♥ (Perfect Pair 25:1 - same suit), Dealer: 7♦ 10♠'
+        },
+        // Bust It scenarios
+        'bust-it-3cards': {
+          cards: '10H 5D 9H 10D 10S',
+          desc: 'Dealer busts with 3 cards (5♦ 10♦ 10♠ = 25) - Bust It 2:1'
+        },
+        'bust-it-4cards': {
+          cards: '10H 5D 9H 5H 5S 7S',
+          desc: 'Dealer busts with 4 cards (5♦ 5♥ 5♠ 7♠ = 22) - Bust It 4:1'
+        },
+        'bust-it-5cards': {
+          cards: '10H 2D 9H 3H 4S 5S 8S',
+          desc: 'Dealer busts with 5 cards (2♦ 3♥ 4♠ 5♠ 8♠ = 22) - Bust It 15:1'
+        },
+        'bust-it-6cards': {
+          cards: '10H 2D 9H 2H 3S 4S 5S 10S',
+          desc: 'Dealer busts with 6 cards (2♦ 2♥ 3♠ 4♠ 5♠ 10♠ = 26) - Bust It 50:1'
+        },
+        'bust-it-7cards': {
+          cards: '10H 2D 9H 2H 2S 2C 3S 4S 10S',
+          desc: 'Dealer busts with 7 cards (2♦ 2♥ 2♠ 2♣ 3♠ 4♠ 10♠ = 25) - Bust It 100:1'
+        },
+        'bust-it-8cards': {
+          cards: '10H AD 9H AH 2S 2D 3S 4S AS 10S',
+          desc: 'Dealer busts with 8 cards (A♦ A♥ 2♠ 2♦ 3♠ 4♠ A♠ 10♠ = 24) - Bust It 250:1'
+        },
+        // 21+3 scenarios
+        '21plus3-flush': {
+          cards: '5H 9H 7H 10D',
+          desc: 'Player 5♥ 7♥ + Dealer 9♥ = Flush (all hearts) - 21+3 5:1'
+        },
+        '21plus3-straight': {
+          cards: '5H 6D 7S 10H',
+          desc: 'Player 5♥ 7♠ + Dealer 6♦ = Straight (5-6-7) - 21+3 10:1'
+        },
+        '21plus3-three-kind': {
+          cards: '8H 8D 8S 10H',
+          desc: 'Player 8♥ 8♠ + Dealer 8♦ = Three of a Kind - 21+3 30:1'
+        },
+        '21plus3-straight-flush': {
+          cards: '5H 6H 7H 10D',
+          desc: 'Player 5♥ 7♥ + Dealer 6♥ = Straight Flush (5-6-7 hearts) - 21+3 40:1'
+        },
+        '21plus3-suited-three': {
+          cards: 'KH KH KH 10D',
+          desc: 'Player K♥ K♥ + Dealer K♥ = Suited Three of a Kind - 21+3 100:1'
+        },
+        'split-aces': {
+          cards: 'AS 7D AH 10H KH QD',
+          desc: 'Player: A♠ A♥ (Split Aces), Dealer: 7♦ 10♥'
+        },
+        'split-tens': {
+          cards: '10H 7S 10D KH QD 9H',
+          desc: 'Player: 10♥ 10♦ (Split Tens), Dealer: 7♠ K♥'
+        }
+      };
+
+      const scenario = scenarios[scenarioName];
+      if (scenario) {
+        // Fill the input field with the scenario cards
+        document.getElementById('dealCards').value = scenario.cards;
+
+        // Show a notification with description
+        addLog(`[Scenario] ${scenarioName}: ${scenario.desc}`, 'normal');
+        addLog(`[Scenario] Cards loaded: ${scenario.cards}`, 'normal');
+
+        // Reset dropdown
+        select.value = '';
       }
     }
 

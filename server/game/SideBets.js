@@ -8,33 +8,48 @@ class SideBets {
    * Wins if first two cards form a pair
    * @param {Array} cards - Player's first two cards
    * @param {Number} betAmount - Bet amount
-   * @returns {Number} Total payout (bet + winnings, or 0 if loss)
+   * @returns {Object} { payout, handType, multiplier } or { payout: 0 } if loss
    */
   static evaluatePerfectPairs(cards, betAmount) {
+    console.log('[PerfectPairs] Evaluating with cards:', cards, 'Bet:', betAmount);
+
     // Must have exactly 2 cards
-    if (!cards || cards.length !== 2) return 0;
+    if (!cards || cards.length !== 2) {
+      console.log('[PerfectPairs] Not exactly 2 cards, returning 0');
+      return { payout: 0 };
+    }
 
     const [card1, card2] = cards;
 
     // Must be same rank to be a pair
-    if (card1.rank !== card2.rank) return 0;
+    if (card1.rank !== card2.rank) {
+      console.log('[PerfectPairs] Different ranks:', card1.rank, 'vs', card2.rank, '- No pair');
+      return { payout: 0 };
+    }
 
     // Determine pair type
     let multiplier = 0;
+    let handType = '';
 
     if (card1.suit === card2.suit) {
       // Perfect Pair - same suit
       multiplier = 25;
+      handType = 'Perfect Pair';
     } else if (this.sameColor(card1, card2)) {
       // Colored Pair - same color, different suit
       multiplier = 12;
+      handType = 'Colored Pair';
     } else {
       // Mixed Pair - different color
       multiplier = 6;
+      handType = 'Mixed Pair';
     }
 
-    // Return total payout (original bet + winnings)
-    return betAmount + (betAmount * multiplier);
+    const payout = betAmount + (betAmount * multiplier);
+    console.log(`[PerfectPairs] ${handType} (${multiplier}:1): ${card1.rank}${card1.suit[0]} + ${card2.rank}${card2.suit[0]} | Payout: $${payout}`);
+
+    // Return payout info
+    return { payout, handType, multiplier };
   }
 
   /**
@@ -57,16 +72,16 @@ class SideBets {
    * Wins if dealer busts, with payout based on card count
    * @param {Array} dealerHand - Dealer's complete hand
    * @param {Number} betAmount - Bet amount
-   * @returns {Number} Total payout (bet + winnings, or 0 if loss)
+   * @returns {Object} { payout, handType, multiplier, cardCount } or { payout: 0 } if loss
    */
   static evaluateBustIt(dealerHand, betAmount) {
-    if (!dealerHand || dealerHand.length === 0) return 0;
+    if (!dealerHand || dealerHand.length === 0) return { payout: 0 };
 
     // Calculate dealer's hand value
     const dealerValue = this.calculateHandValue(dealerHand);
 
     // Dealer must bust for this bet to win
-    if (dealerValue <= 21) return 0;
+    if (dealerValue <= 21) return { payout: 0 };
 
     const cardCount = dealerHand.length;
 
@@ -83,10 +98,13 @@ class SideBets {
     // 8+ cards all pay 250:1
     const multiplier = cardCount >= 8 ? payoutTable[8] : (payoutTable[cardCount] || 0);
 
-    if (multiplier === 0) return 0;
+    if (multiplier === 0) return { payout: 0 };
 
-    // Return total payout (original bet + winnings)
-    return betAmount + (betAmount * multiplier);
+    const payout = betAmount + (betAmount * multiplier);
+    const handType = cardCount >= 8 ? '8+ Cards' : `${cardCount} Cards`;
+
+    // Return payout info
+    return { payout, handType, multiplier, cardCount };
   }
 
   // ==================== 21+3 ====================
@@ -97,37 +115,40 @@ class SideBets {
    * @param {Array} playerCards - Player's first two cards
    * @param {Object} dealerUpCard - Dealer's face-up card
    * @param {Number} betAmount - Bet amount
-   * @returns {Number} Total payout (bet + winnings, or 0 if loss)
+   * @returns {Object} { payout, handType, multiplier } or { payout: 0 } if loss
    */
   static evaluate21Plus3(playerCards, dealerUpCard, betAmount) {
-    if (!playerCards || playerCards.length < 2 || !dealerUpCard) return 0;
+    if (!playerCards || playerCards.length < 2 || !dealerUpCard) return { payout: 0 };
 
     // Combine first two player cards with dealer upcard
     const threeCards = [playerCards[0], playerCards[1], dealerUpCard];
 
+    let multiplier = 0;
+    let handType = '';
+
     // Check hands in order from highest to lowest payout
     if (this.isSuitedThreeOfKind(threeCards)) {
-      return betAmount + (betAmount * 100); // 100:1
+      multiplier = 100;
+      handType = 'Suited Three of a Kind';
+    } else if (this.isStraightFlush(threeCards)) {
+      multiplier = 40;
+      handType = 'Straight Flush';
+    } else if (this.isThreeOfKind(threeCards)) {
+      multiplier = 30;
+      handType = 'Three of a Kind';
+    } else if (this.isStraight(threeCards)) {
+      multiplier = 10;
+      handType = 'Straight';
+    } else if (this.isFlush(threeCards)) {
+      multiplier = 5;
+      handType = 'Flush';
+    } else {
+      // No winning hand
+      return { payout: 0 };
     }
 
-    if (this.isStraightFlush(threeCards)) {
-      return betAmount + (betAmount * 40); // 40:1
-    }
-
-    if (this.isThreeOfKind(threeCards)) {
-      return betAmount + (betAmount * 30); // 30:1
-    }
-
-    if (this.isStraight(threeCards)) {
-      return betAmount + (betAmount * 10); // 10:1
-    }
-
-    if (this.isFlush(threeCards)) {
-      return betAmount + (betAmount * 5); // 5:1
-    }
-
-    // No winning hand
-    return 0;
+    const payout = betAmount + (betAmount * multiplier);
+    return { payout, handType, multiplier };
   }
 
   // ==================== POKER HAND EVALUATORS ====================
