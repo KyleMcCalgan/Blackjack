@@ -60,8 +60,9 @@ let statistics = new Statistics(gameRoom);
 let testMode = new TestMode(gameRoom);
 let adminCommands = new AdminCommands(gameRoom, statistics, testMode);
 
-// Set testMode reference in gameRoom for autoplay checks
+// Set testMode and statistics references in gameRoom
 gameRoom.testMode = testMode;
+gameRoom.statistics = statistics;
 
 console.log('[Server] Game systems initialized');
 
@@ -466,14 +467,8 @@ server.listen(PORT, async () => {
 process.on('SIGINT', () => {
   console.log('\n\nShutting down server...');
 
-  // Export statistics before shutdown
-  if (statistics && gameRoom.roundNumber > 0) {
-    console.log('Exporting final statistics...');
-    const result = statistics.exportToJSON();
-    if (result.success) {
-      console.log(`Statistics exported to: ${result.filePath}`);
-    }
-  }
+  // Note: Statistics are NOT auto-exported on shutdown
+  // Use /export command if you want to save stats before closing
 
   rl.close();
 

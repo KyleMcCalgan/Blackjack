@@ -762,6 +762,13 @@ function handleGameState(state) {
     if (gameState.phase === 'betting' && state.phase !== 'betting') {
         gameState.currentBets = null;
         gameState.readyRequestPending = false; // Clear pending flag
+
+        // Close betting modal if it's open
+        const bettingModal = document.getElementById('bettingModal');
+        if (bettingModal && bettingModal.style.display !== 'none') {
+            console.log('[App] Closing betting modal as phase changed from betting to', state.phase);
+            bettingModal.style.display = 'none';
+        }
     }
 
     // Update global state
@@ -1916,12 +1923,28 @@ function showInsuranceControls(state) {
     document.getElementById('insuranceYesBtn').addEventListener('click', () => {
         console.log('[App] Taking insurance');
         gameState.socket.emit('place-insurance', { takesInsurance: true });
+
+        // Provide immediate feedback
+        const yesBtn = document.getElementById('insuranceYesBtn');
+        if (yesBtn) {
+            yesBtn.textContent = '✓ Insurance Taken';
+            yesBtn.style.background = '#28a745';
+        }
+
         disableInsuranceButtons();
     });
 
     document.getElementById('insuranceNoBtn').addEventListener('click', () => {
         console.log('[App] Declining insurance');
         gameState.socket.emit('place-insurance', { takesInsurance: false });
+
+        // Provide immediate feedback
+        const noBtn = document.getElementById('insuranceNoBtn');
+        if (noBtn) {
+            noBtn.textContent = '✓ No Insurance';
+            noBtn.style.background = '#6c757d';
+        }
+
         disableInsuranceButtons();
     });
 
@@ -2258,12 +2281,21 @@ function showResultsModal(myResults, roundData) {
         totalBet += hand.bet;
     });
 
+    // Add insurance to total bet
+    if (myResults.insurance) totalBet += myResults.insurance.bet;
+
     // Add side bets to total bet
     if (myResults.sideBets.perfectPairs) totalBet += myResults.sideBets.perfectPairs.bet;
     if (myResults.sideBets.bustIt) totalBet += myResults.sideBets.bustIt.bet;
     if (myResults.sideBets.twentyOnePlus3) totalBet += myResults.sideBets.twentyOnePlus3.bet;
 
-    const netProfit = myResults.totalWinnings - totalBet;
+    // Calculate net profit (totalWinnings already includes insurance payout if won)
+    let netProfit = myResults.totalWinnings - totalBet;
+
+    // Add insurance payout if won (insurance payouts are added to bankroll separately)
+    if (myResults.insurance && myResults.insurance.won) {
+        netProfit += myResults.insurance.payout;
+    }
     const isWin = netProfit > 0;
     const isPush = netProfit === 0;
 
@@ -2359,6 +2391,22 @@ function showResultsModal(myResults, roundData) {
     });
 
     html += `</div>`;
+
+    // Show insurance result if any
+    if (myResults.insurance) {
+        html += `<div class="results-breakdown"><h3>Insurance</h3>`;
+        const ins = myResults.insurance;
+        html += `
+            <div class="result-item ${ins.won ? 'win' : 'loss'}">
+                <div class="result-label">Insurance ${ins.won ? '✓ Won' : '✗ Lost'}</div>
+                <div class="result-details">
+                    <span>Bet: $${ins.bet}</span>
+                    <span class="result-payout">Payout: $${ins.payout}</span>
+                </div>
+            </div>
+        `;
+        html += `</div>`;
+    }
 
     // Show side bet results if any
     const hasSideBets = myResults.sideBets.perfectPairs || myResults.sideBets.bustIt || myResults.sideBets.twentyOnePlus3;

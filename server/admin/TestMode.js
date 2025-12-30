@@ -180,6 +180,17 @@ class TestMode {
   }
 
   /**
+   * Reset card index for new round (keeps the cards, just resets index to 0)
+   * This allows the same card sequence to be used across multiple rounds
+   */
+  resetForNewRound() {
+    if (this.enabled && this.preDealtCards.length > 0) {
+      this.cardIndex = 0;
+      console.log(`[TestMode] Reset card index for new round - ${this.preDealtCards.length} cards will be re-dealt`);
+    }
+  }
+
+  /**
    * Get current test mode status
    * @returns {Object} Status info
    */

@@ -287,7 +287,12 @@ class GameRoom {
 
     console.log('[GameRoom] Starting game');
     this.phase = 'betting';
-    this.roundNumber = 0;
+    this.roundNumber = 1; // Start at round 1
+
+    // Record round start in statistics
+    if (this.statistics) {
+      this.statistics.startRound();
+    }
 
     this.broadcastGameState();
     this.startBettingPhase();
@@ -311,6 +316,11 @@ class GameRoom {
     console.log(`[GameRoom] Starting round ${this.roundNumber + 1}`);
     this.roundNumber++;
 
+    // Record round start in statistics
+    if (this.statistics) {
+      this.statistics.startRound();
+    }
+
     // Reset dealer
     this.dealer.clearHand();
 
@@ -322,6 +332,11 @@ class GameRoom {
     // Clear insurance and pre-actions
     this.insuranceBets.clear();
     this.preActions.clear();
+
+    // Reset test mode card index for new round
+    if (this.testMode) {
+      this.testMode.resetForNewRound();
+    }
 
     this.startBettingPhase();
   }
@@ -963,8 +978,26 @@ class GameRoom {
             handIndex: handIndex + 1
           });
 
-          // Continue with first split hand
-          this.startNextTurn();
+          // Check if first split hand is now complete (e.g., auto-stood on 21)
+          // If so, move to next hand instead of staying on current hand
+          if (player.hands[handIndex].status !== 'active') {
+            console.log(`[GameRoom] First split hand auto-completed with status: ${player.hands[handIndex].status}`);
+            // Move to next hand (the second split hand)
+            this.currentHandIndex = handIndex + 1;
+
+            // Check if second hand is also complete
+            if (player.hands[this.currentHandIndex].status !== 'active') {
+              console.log(`[GameRoom] Second split hand also auto-completed with status: ${player.hands[this.currentHandIndex].status}`);
+              // Both hands complete, move to next player
+              this.nextTurn();
+            } else {
+              // Second hand is active, continue with it
+              this.startNextTurn();
+            }
+          } else {
+            // First hand is still active, continue with it
+            this.startNextTurn();
+          }
           break;
 
         default:
@@ -1139,6 +1172,7 @@ class GameRoom {
         name: player.name,
         hands: [],
         sideBets: {},
+        insurance: null,
         totalWinnings: 0,
         newBankroll: 0
       };
@@ -1175,6 +1209,28 @@ class GameRoom {
         player.recordHandResult(result, payout);
       }
 
+      // Add insurance info if player took insurance
+      const insuranceBet = this.insuranceBets.get(player.id);
+      if (insuranceBet) {
+        const insurancePayout = dealerBlackjack
+          ? insuranceBet * (GameRules.parsePayoutRatio(this.config.insurancePayout) + 1)
+          : 0;
+
+        playerResults.insurance = {
+          bet: insuranceBet,
+          payout: insurancePayout,
+          won: dealerBlackjack
+        };
+
+        // Note: Insurance payout was already added to bankroll in endInsurancePhase
+        // So we DON'T add it to totalWinnings here to avoid double-counting
+        // But we need to adjust totalWinnings to reflect the insurance bet cost
+        if (!dealerBlackjack) {
+          // If insurance lost, the bet was already deducted in endInsurancePhase
+          // We just need to show it in results
+        }
+      }
+
       // Evaluate side bets
       if (player.sideBets.perfectPairs > 0) {
         const perfectPairsPayout = SideBets.evaluatePerfectPairs(player.hands[0].cards, player.sideBets.perfectPairs);
@@ -1184,6 +1240,11 @@ class GameRoom {
           won: perfectPairsPayout > 0
         };
         playerResults.totalWinnings += perfectPairsPayout;
+
+        // Record side bet statistics
+        if (this.statistics) {
+          this.statistics.recordSideBet('perfectPairs', player.sideBets.perfectPairs, perfectPairsPayout);
+        }
       }
 
       if (player.sideBets.bustIt > 0) {
@@ -1194,6 +1255,11 @@ class GameRoom {
           won: bustItPayout > 0
         };
         playerResults.totalWinnings += bustItPayout;
+
+        // Record side bet statistics
+        if (this.statistics) {
+          this.statistics.recordSideBet('bustIt', player.sideBets.bustIt, bustItPayout);
+        }
       }
 
       if (player.sideBets.twentyOnePlus3 > 0) {
@@ -1208,6 +1274,11 @@ class GameRoom {
           won: twentyOnePlus3Payout > 0
         };
         playerResults.totalWinnings += twentyOnePlus3Payout;
+
+        // Record side bet statistics
+        if (this.statistics) {
+          this.statistics.recordSideBet('twentyOnePlus3', player.sideBets.twentyOnePlus3, twentyOnePlus3Payout);
+        }
       }
 
       // Add winnings to bankroll
@@ -1230,6 +1301,24 @@ class GameRoom {
     });
 
     this.broadcastGameState();
+
+    // Record round statistics
+    if (this.statistics) {
+      const roundData = {
+        activePlayers: results.length,
+        dealer: {
+          hasBlackjack: dealerBlackjack,
+          isBust: this.dealer.isBust,
+          finalValue: dealerValue
+        },
+        players: results.map(r => ({
+          name: r.name,
+          result: r.hands.map(h => h.result).join(', '),
+          winnings: r.totalWinnings
+        }))
+      };
+      this.statistics.recordRound(roundData);
+    }
 
     // Start next round after delay (only if autoplay is enabled)
     if (this.isAutoplayEnabled()) {

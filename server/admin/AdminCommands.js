@@ -212,11 +212,17 @@ class AdminCommands {
 
   /**
    * Set pre-dealt cards in test mode
-   * @param {Array} args - Card strings (e.g., AS KH 10D)
+   * @param {Array} args - Card strings (e.g., AS KH 10D) or 'clear' to return to random
    */
   cmdDeal(args) {
     if (args.length === 0) {
-      return 'Usage: /deal <cards>\nExample: /deal AS KH 10D 7C\nFormat: Rank (A,2-10,J,Q,K) + Suit (H,D,C,S)';
+      return 'Usage: /deal <cards|clear>\nExample: /deal AS KH 10D 7C\nFormat: Rank (A,2-10,J,Q,K) + Suit (H,D,C,S)\nUse /deal clear to return to random dealing';
+    }
+
+    // Check if user wants to clear cards and return to random dealing
+    if (args[0].toLowerCase() === 'clear' || args[0].toLowerCase() === 'random') {
+      const result = this.testMode.clearCards();
+      return result.message + ' - Random dealing restored';
     }
 
     const result = this.testMode.setCards(args.join(' '));
@@ -497,6 +503,7 @@ class AdminCommands {
     output += '/test-mode <on|off> Toggle test mode\n';
     output += '/deal <cards>       Set pre-dealt cards\n';
     output += '                    Example: /deal AS KH 10D 7C\n';
+    output += '/deal clear         Return to random dealing\n';
     output += '/scenario <name>    Load preset scenario\n';
     output += '/scenario           List available scenarios\n';
     output += '/autoplay <on|off>  Toggle auto-advance phases\n';

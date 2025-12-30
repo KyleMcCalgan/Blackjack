@@ -315,6 +315,42 @@ KH  - King of Hearts ♥
 Set 6 pre-dealt cards: A♠, K♥, 10♦, 7♣, 9♠, 8♥
 ```
 
+### Clearing Cards (Return to Random Dealing)
+
+Once you've set specific cards, you can return to random dealing **without** disabling test mode:
+
+**Via Command:**
+```
+/deal clear
+```
+
+**Or:**
+```
+/deal random
+```
+
+**Output:**
+```
+Pre-dealt cards cleared - Random dealing restored
+```
+
+**What this does:**
+- Clears all pre-dealt cards
+- Next round will use random deck dealing
+- Test mode stays enabled (useful for re-setting cards later)
+- If you want to completely disable test mode, use `/test-mode off`
+
+**Example workflow:**
+```bash
+/test-mode on
+/deal AS KH 7D 10D    # Test with specific cards
+/ready                # Play round 1 with those cards
+/deal clear           # Clear cards
+/ready                # Play round 2 with random cards
+/deal 10H 10D 7S KH   # Set new specific cards
+/ready                # Play round 3 with new cards
+```
+
 ### Card Dealing Order
 
 For a **single player** game:
@@ -685,6 +721,7 @@ Command: /players
 ```bash
 /test-mode <on|off>     # Enable/disable test mode
 /deal <cards>           # Set pre-dealt cards
+/deal clear             # Clear cards, return to random dealing
 /scenario <name>        # Load preset scenario
 /scenario               # List all scenarios
 /autoplay <on|off>      # Toggle auto-advance
@@ -955,6 +992,7 @@ Create complex scenarios:
 │ TEST MODE:                              │
 │   /test-mode on     Enable testing      │
 │   /deal AS KH 10D   Set cards           │
+│   /deal clear       Random dealing      │
 │   /scenario <name>  Load preset         │
 │                                         │
 │ CONTROL:                                │
